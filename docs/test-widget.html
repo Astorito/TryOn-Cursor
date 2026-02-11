@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test TryOn Widget</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .instructions {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test del Widget TryOn - Cambios Implementados</h1>
+
+        <div class="instructions">
+            <h3>✅ Cambios Implementados:</h3>
+            <ul>
+                <li><strong>CAMBIO 1:</strong> Diseño visual mejorado con logo ✨, botón cierre 24px, bordes sutiles, textos mejorados, emojis prendas, botón Try Look en footer</li>
+                <li><strong>CAMBIO 2:</strong> Layout flex dinámico con cálculos automáticos de tamaño, header/content/footer fijos, transiciones suaves</li>
+                <li><strong>CAMBIO 3:</strong> Botones de eliminación con estilo blanco y sombra funcional</li>
+            </ul>
+        </div>
+
+        <div class="instructions">
+            <h3>🎯 Cómo probar:</h3>
+            <ol>
+                <li>Haz clic en el botón "✨ Try Look" en la esquina inferior derecha</li>
+                <li>Verifica el diseño del panel: header con logo, content con boxes cuadrados, footer con botón</li>
+                <li>Sube una foto de usuario y verifica que aparezca el botón × blanco para eliminar</li>
+                <li>Sube prendas y verifica los botones × en cada box</li>
+                <li>Redimensiona la ventana y observa cómo los boxes se ajustan dinámicamente</li>
+                <li>Verifica que el botón "Try Look" esté siempre visible en el footer</li>
+            </ol>
+        </div>
+
+        <p style="text-align: center; color: #666;">
+            El widget se cargará automáticamente al final de esta página.
+        </p>
+    </div>
+
+    <!-- TryOn Widget -->
+    <script src="http://localhost:3001/api/widget.js" data-tryon-key="demo_key_tryon_2024"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+{
+  "name": "tryon-virtual-try-on",
+  "version": "1.0.0",
+  "description": "Sistema de virtual try-on basado en inteligencia artificial",
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:push": "prisma db push",
+    "prisma:studio": "prisma studio",
+    "init-demo": "node scripts/init-demo-client.js"
+  },
+  "dependencies": {
+    "@fal-ai/client": "^1.8.1",
+    "@prisma/client": "^5.9.1",
+    "@supabase/supabase-js": "^2.39.7",
+    "jsonwebtoken": "^9.0.3",
+    "next": "^15.0.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "recharts": "^3.6.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "autoprefixer": "^10.4.24",
+    "postcss": "^8.5.6",
+    "prisma": "^5.9.1",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

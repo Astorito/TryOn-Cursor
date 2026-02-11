@@ -1,0 +1,170 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Clientes/Tiendas que usan el widget
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  apiKey    String   @unique
+  website   String?
+  active    Boolean  @default(true)
+  limit     Int      @default(5000)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  generations    Generation[]
+  metrics        Metric[]
+  allowedDomains AllowedDomain[]
+
+  @@index([apiKey])
+  @@index([active])
+}
+
+// Dominios permitidos por cliente (para CORS)
+model AllowedDomain {
+  id       String @id @default(cuid())
+  domain   String // ej: "tienda.com" (sin protocolo)
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, domain])
+  @@index([clientId])
+}
+
+// Generaciones de imágenes
+model Generation {
+  id       String           @id @default(cuid())
+  clientId String
+  status   GenerationStatus @default(QUEUED)
+  model    String           @default("fal-ai/nano-banana-pro/edit")
+
+  // Inputs
+  personImageUrl String
+  garmentUrls    String[] // Array de URLs
+
+  // Resultados
+  resultUrl String?
+  error     String?
+
+  // Timing
+  durationMs    Int? // Total duration
+  falDurationMs Int? // Solo FAL AI
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  // Relaciones
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Eventos de métricas
+model Metric {
+  id        String     @id @default(cuid())
+  type      MetricType
+  clientId  String
+  timestamp DateTime   @default(now())
+
+  // Metadata
+  model      String?
+  durationMs Int?
+  status     String?
+  error      String?
+
+  // Relaciones
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([type])
+  @@index([timestamp])
+}
+
+// Jobs asíncronos (reemplaza Redis)
+model Job {
+  id     String    @id @default(cuid())
+  type   JobType   @default(GENERATION)
+  status JobStatus @default(QUEUED)
+
+  // Payload
+  clientId String
+  inputs   Json // { personImageUrl, garmentUrls[], apiKey }
+
+  // Resultados
+  result Json? // { resultUrl, timings }
+  error  String?
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+  expiresAt   DateTime // Se setea en la aplicación
+
+  @@index([status])
+  @@index([expiresAt])
+  @@index([clientId])
+}
+
+// Rate limiting (reemplaza Redis)
+model RateLimit {
+  key         String   @id // "api:client_123" o "ip:192.168.1.1"
+  count       Int      @default(0)
+  windowStart DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([expiresAt])
+}
+
+// Caché de resultados (reemplaza Redis)
+model ResultCache {
+  inputsHash String   @id
+  resultUrl  String
+  clientId   String
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime // Se setea en la aplicación
+
+  @@index([expiresAt])
+  @@index([clientId])
+}
+
+// === ENUMS ===
+
+enum GenerationStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  ERROR
+}
+
+enum MetricType {
+  GENERATION
+  UPLOAD
+  ERROR
+}
+
+enum JobType {
+  GENERATION
+  UPLOAD
+}
+
+enum JobStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  ERROR
+}

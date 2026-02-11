@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+/* ═══ Custom Theme - TryOn ═══ */
+@theme {
+  /* Primary gradient: Blue → Purple */
+  --color-primary: #667eea;
+  --color-primary-dark: #764ba2;
+
+  /* Success gradient: Yellow → Amber */
+  --color-success: #fbbf24;
+  --color-success-dark: #f59e0b;
+
+  /* Neutral palette */
+  --color-surface: #ffffff;
+  --color-surface-alt: #f9fafb;
+  --color-border: #e5e7eb;
+  --color-text: #111827;
+  --color-text-muted: #6b7280;
+  --color-text-light: #9ca3af;
+
+  /* Status */
+  --color-error: #ef4444;
+  --color-warning: #f59e0b;
+  --color-info: #3b82f6;
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-panel: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-modal: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
+/* ═══ Global styles ═══ */
+body {
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  color: var(--color-text);
+  background-color: var(--color-surface-alt);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ═══ Gradient utilities ═══ */
+.gradient-primary {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+}
+
+.gradient-success {
+  background: linear-gradient(135deg, var(--color-success), var(--color-success-dark));
+}
