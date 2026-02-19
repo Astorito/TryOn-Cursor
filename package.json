@@ -4,6 +4,7 @@
   "description": "Sistema de virtual try-on basado en inteligencia artificial",
   "scripts": {
     "dev": "next dev -H 0.0.0.0 -p 3001",
+    "prebuild": "npm run prisma:generate",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
