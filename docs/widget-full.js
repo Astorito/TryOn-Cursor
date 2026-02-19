@@ -557,7 +557,15 @@
   }
 
   function attachEvents() {
-    fab.onclick = openPanel;
+    fab.onclick = togglePanel;
+  }
+
+  function togglePanel() {
+    if (state.isOpen) {
+      closePanel();
+    } else {
+      openPanel();
+    }
   }
 
   function openPanel() {
@@ -565,6 +573,8 @@
     overlay.style.display = 'block';
     panel.style.display = 'flex';
     panel.style.animation = 'slideIn 0.3s ease';
+    // Re-attach drag listeners after panel is displayed
+    setTimeout(() => setupFileInputs(), 0);
   }
 
   function closePanel() {
@@ -633,67 +643,81 @@
 
     // User image
     const userUpload = shadowQuerySelector('#user-upload');
-    userUpload.onclick = () => selectFile('user');
-    addDragDrop(userUpload, 'user', 0);
+    if (userUpload) {
+      userUpload.onclick = () => selectFile('user');
+      addDragDrop(userUpload, 'user', 0);
+    }
 
     // Garments
     for (let i = 0; i < 3; i++) {
       const garmentBox = shadowQuerySelector('#garment-' + i);
-      garmentBox.onclick = () => selectFile('garment', i);
-      addDragDrop(garmentBox, 'garment', i);
+      if (garmentBox) {
+        garmentBox.onclick = () => selectFile('garment', i);
+        addDragDrop(garmentBox, 'garment', i);
+      }
     }
 
     // Submit button
     const submitBtn = shadowQuerySelector('#submit-btn');
-    submitBtn.onclick = (e) => {
-      if (!submitBtn.disabled) {
-        generateTryOn();
-      }
-    };
-    submitBtn.onmouseover = () => {
-      if (!submitBtn.disabled) {
-        submitBtn.style.transform = 'translateY(-2px)';
-      }
-    };
-    submitBtn.onmouseout = () => {
-      submitBtn.style.transform = 'translateY(0)';
-    };
+    if (submitBtn) {
+      submitBtn.onclick = (e) => {
+        if (!submitBtn.disabled) {
+          generateTryOn();
+        }
+      };
+      submitBtn.onmouseover = () => {
+        if (!submitBtn.disabled) {
+          submitBtn.style.transform = 'translateY(-2px)';
+        }
+      };
+      submitBtn.onmouseout = () => {
+        submitBtn.style.transform = 'translateY(0)';
+      };
+    }
 
-    // Add drag & drop listeners to overlay for external drags
-    overlay.addEventListener('dragenter', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-    }, false);
-
-    overlay.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      e.dataTransfer.dropEffect = 'copy';
-    }, false);
-
-    overlay.addEventListener('dragleave', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-    }, false);
-
-    overlay.addEventListener('drop', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+    // Setup overlay drag listeners (only once)
+    if (!overlay._dragListenerSetup) {
+      overlay._dragListenerSetup = true;
       
-      if (e.dataTransfer.files.length > 0) {
-        var file = e.dataTransfer.files[0];
-        // Default to first empty garment slot
-        var targetIndex = state.garments.findIndex(g => g === null);
-        if (targetIndex === -1) targetIndex = 0;
-        handleFileFromDrop(file, 'garment', targetIndex);
-      }
-    }, false);
+      overlay.addEventListener('dragenter', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }, false);
 
-    // Add global drag & drop interception for external drag sources
+      overlay.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'copy';
+      }, false);
+
+      overlay.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }, false);
+
+      overlay.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (e.dataTransfer.files.length > 0) {
+          var file = e.dataTransfer.files[0];
+          // Default to first empty garment slot
+          var targetIndex = state.garments.findIndex(g => g === null);
+          if (targetIndex === -1) targetIndex = 0;
+          handleFileFromDrop(file, 'garment', targetIndex);
+        }
+      }, false);
+    }
+
+    // Setup global drag & drop
     setupGlobalDragDrop();
   }
 
   function setupGlobalDragDrop() {
+    // Only setup once
+    if (document._tryonDragSetup) return;
+    document._tryonDragSetup = true;
+
     // Intercept drag events globally using capture phase
     document.addEventListener('dragenter', function(e) {
       if (!state.isOpen) return;
