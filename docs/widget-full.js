@@ -97,7 +97,7 @@
     // Create container
     container = document.createElement('div');
     container.id = WIDGET_ID;
-    container.style.cssText = 'position: fixed; z-index: 2147483647; pointer-events: none;';
+    container.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2147483647; pointer-events: none;';
     document.body.appendChild(container);
 
     // Create Shadow DOM
@@ -105,25 +105,25 @@
 
     // Create wrapper inside shadow root
     var wrapper = document.createElement('div');
-    wrapper.style.cssText = 'all: initial; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; position: relative; pointer-events: auto;';
+    wrapper.style.cssText = 'all: initial; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;';
     shadow.appendChild(wrapper);
 
     // Floating Action Button
     fab = document.createElement('button');
     fab.innerHTML = '✨ Try Look';
-    fab.style.cssText = 'position: fixed; bottom: 24px; right: 24px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 28px; padding: 16px 24px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.2s; z-index: 1; pointer-events: auto;';
+    fab.style.cssText = 'position: fixed; bottom: 24px; right: 24px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 28px; padding: 16px 24px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.2s; pointer-events: auto;';
     fab.onmouseover = () => fab.style.transform = 'translateY(-2px)';
     fab.onmouseout = () => fab.style.transform = 'translateY(0)';
     wrapper.appendChild(fab);
 
-    // Overlay (visual dimming with proper event handling)
+    // Overlay (invisible but for event interception)
     overlay = document.createElement('div');
-    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 0; display: none; pointer-events: auto;';
+    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: transparent; display: none; pointer-events: none;';
     wrapper.appendChild(overlay);
 
     // Main panel
     panel = document.createElement('div');
-    panel.style.cssText = 'position: fixed; bottom: 82px; right: 24px; width: ' + layoutConfig.panelWidth + 'px; height: ' + layoutConfig.panelTotalHeight + 'px; background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); z-index: 2; display: none; overflow: hidden; flex-direction: column; transition: height 0.4s ease; pointer-events: auto;';
+    panel.style.cssText = 'position: fixed; bottom: 82px; right: 24px; width: ' + layoutConfig.panelWidth + 'px; height: ' + layoutConfig.panelTotalHeight + 'px; background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); display: none; overflow: hidden; flex-direction: column; transition: height 0.4s ease; pointer-events: auto;';
     wrapper.appendChild(panel);
 
     // Loading overlay
@@ -563,9 +563,6 @@
   function openPanel() {
     state.isOpen = true;
     overlay.style.display = 'block';
-    overlay.onmousedown = () => {
-      closePanel(); // Close on overlay click (outside panel)
-    };
     panel.style.display = 'flex';
     panel.style.animation = 'slideIn 0.3s ease';
   }
@@ -573,7 +570,6 @@
   function closePanel() {
     state.isOpen = false;
     overlay.style.display = 'none';
-    overlay.onmousedown = null;
     panel.style.display = 'none';
     // Reset panel height
     panel.style.height = layoutConfig.panelTotalHeight + 'px';
