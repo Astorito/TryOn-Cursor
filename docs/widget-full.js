@@ -97,7 +97,7 @@
     // Create container
     container = document.createElement('div');
     container.id = WIDGET_ID;
-    container.style.cssText = 'position: fixed; z-index: 999999;';
+    container.style.cssText = 'position: fixed; z-index: 2147483647; pointer-events: none;';
     document.body.appendChild(container);
 
     // Create Shadow DOM
@@ -105,30 +105,30 @@
 
     // Create wrapper inside shadow root
     var wrapper = document.createElement('div');
-    wrapper.style.cssText = 'all: initial; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; position: relative;';
+    wrapper.style.cssText = 'all: initial; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; position: relative; pointer-events: auto;';
     shadow.appendChild(wrapper);
 
     // Floating Action Button
     fab = document.createElement('button');
     fab.innerHTML = '✨ Try Look';
-    fab.style.cssText = 'position: fixed; bottom: 24px; right: 24px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 28px; padding: 16px 24px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.2s; z-index: 1000000;';
+    fab.style.cssText = 'position: fixed; bottom: 24px; right: 24px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 28px; padding: 16px 24px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.2s; z-index: 1; pointer-events: auto;';
     fab.onmouseover = () => fab.style.transform = 'translateY(-2px)';
     fab.onmouseout = () => fab.style.transform = 'translateY(0)';
     wrapper.appendChild(fab);
 
-    // Overlay (visual dimming kept, but allow pointer events to pass through the page)
+    // Overlay (visual dimming with proper event handling)
     overlay = document.createElement('div');
-    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); pointer-events: none; z-index: 999998; display: none;';
+    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 0; display: none; pointer-events: auto;';
     wrapper.appendChild(overlay);
 
     // Main panel
     panel = document.createElement('div');
-    panel.style.cssText = 'position: fixed; bottom: 82px; right: 24px; width: ' + layoutConfig.panelWidth + 'px; height: ' + layoutConfig.panelTotalHeight + 'px; background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); z-index: 999999; display: none; overflow: hidden; flex-direction: column; transition: height 0.4s ease;';
+    panel.style.cssText = 'position: fixed; bottom: 82px; right: 24px; width: ' + layoutConfig.panelWidth + 'px; height: ' + layoutConfig.panelTotalHeight + 'px; background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); z-index: 2; display: none; overflow: hidden; flex-direction: column; transition: height 0.4s ease; pointer-events: auto;';
     wrapper.appendChild(panel);
 
     // Loading overlay
     loadingOverlay = document.createElement('div');
-    loadingOverlay.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.98); z-index: 10; display: none; flex-direction: column; justify-content: center; align-items: center;';
+    loadingOverlay.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.98); z-index: 10; display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto;';
     panel.appendChild(loadingOverlay);
 
     // Store shadow root for later use
@@ -563,6 +563,9 @@
   function openPanel() {
     state.isOpen = true;
     overlay.style.display = 'block';
+    overlay.onmousedown = () => {
+      closePanel(); // Close on overlay click (outside panel)
+    };
     panel.style.display = 'flex';
     panel.style.animation = 'slideIn 0.3s ease';
   }
@@ -570,6 +573,7 @@
   function closePanel() {
     state.isOpen = false;
     overlay.style.display = 'none';
+    overlay.onmousedown = null;
     panel.style.display = 'none';
     // Reset panel height
     panel.style.height = layoutConfig.panelTotalHeight + 'px';
@@ -658,6 +662,35 @@
     submitBtn.onmouseout = () => {
       submitBtn.style.transform = 'translateY(0)';
     };
+
+    // Add global drag & drop interception for external drag sources
+    setupGlobalDragDrop();
+  }
+
+  function setupGlobalDragDrop() {
+    // Prevent drag default behavior globally
+    document.addEventListener('dragover', function(e) {
+      if (state.isOpen && container._dragTargets) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, true);
+
+    document.addEventListener('drop', function(e) {
+      if (state.isOpen && container._dragTargets && e.dataTransfer.files.length > 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Try to find the closest target element in panel
+        var file = e.dataTransfer.files[0];
+        
+        // Default to first empty garment slot
+        var targetIndex = state.garments.findIndex(g => g === null);
+        if (targetIndex === -1) targetIndex = 0;
+        
+        handleFileFromDrop(file, 'garment', targetIndex);
+      }
+    }, true);
   }
 
   function selectFile(type, index = 0) {
@@ -715,13 +748,19 @@
   }
 
   function addDragDrop(element, type, index) {
+    // Store reference for external drag handling
+    if (!container._dragTargets) {
+      container._dragTargets = [];
+    }
+    container._dragTargets.push({ element, type, index });
+
     element.addEventListener('dragover', function(e) {
       e.preventDefault();
       e.stopPropagation();
       element.style.borderColor = '#667eea';
       element.style.background = '#f0f4ff';
       element.style.transform = 'translateY(-1px)';
-    });
+    }, true);
 
     element.addEventListener('dragleave', function(e) {
       e.preventDefault();
@@ -729,7 +768,7 @@
       element.style.borderColor = element.classList.contains('has-image') ? '#10b981' : '#e0e7ff';
       element.style.background = element.classList.contains('has-image') ? '#f0fdf4' : '#f8fafc';
       element.style.transform = 'translateY(0)';
-    });
+    }, true);
 
     element.addEventListener('drop', function(e) {
       e.preventDefault();
@@ -740,7 +779,7 @@
 
       var file = e.dataTransfer.files[0];
       handleFileFromDrop(file, type, index);
-    });
+    }, true);
   }
 
   function updateUserUploadBox(hasImage, imageSrc = null) {
