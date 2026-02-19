@@ -20,7 +20,8 @@ export async function GET() {
   } catch (err) {
     // log the error + fallback
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/6409409d-10bf-4ec6-ac7c-944201295ebb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/widget/route.ts:GET',message:'failed reading widget file',data:{error: (err && err.message) ? err.message : String(err)},timestamp:Date.now(),runId:'pre-fix',hypothesisId:'H2'})}).catch(()=>{});
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    fetch('http://127.0.0.1:7242/ingest/6409409d-10bf-4ec6-ac7c-944201295ebb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/widget/route.ts:GET',message:'failed reading widget file',data:{error: errorMessage},timestamp:Date.now(),runId:'pre-fix',hypothesisId:'H2'})}).catch(()=>{});
     // #endregion
     const fallback = `(function(){const key=document.currentScript&&document.currentScript.dataset.tryonKey;console.log("TryOn fallback widget. Key:",key);})();`;
     return new NextResponse(fallback, {

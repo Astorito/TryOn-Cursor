@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   LineChart,
   Line,
@@ -137,15 +138,23 @@ export default function AnalyticsPage() {
             Métricas de uso y rendimiento del sistema
           </p>
         </div>
-        <select
-          value={timeRange}
-          onChange={(e) => setTimeRange(e.target.value)}
-          className="px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-        >
-          <option value="7d">Últimos 7 días</option>
-          <option value="30d">Últimos 30 días</option>
-          <option value="90d">Últimos 90 días</option>
-        </select>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard/analytics/financiero"
+            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all shadow-sm flex items-center gap-2"
+          >
+            💰 Dashboard Financiero
+          </Link>
+          <select
+            value={timeRange}
+            onChange={(e) => setTimeRange(e.target.value)}
+            className="px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="7d">Últimos 7 días</option>
+            <option value="30d">Últimos 30 días</option>
+            <option value="90d">Últimos 90 días</option>
+          </select>
+        </div>
       </div>
 
       {/* KPI Cards */}

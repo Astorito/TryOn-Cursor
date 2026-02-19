@@ -81,3 +81,68 @@ export async function cleanupExpiredRateLimits(): Promise<number> {
   });
   return result.count;
 }
+
+// --- Tier-based helpers (compatibilidad con ruta docs) ---
+
+interface TierLimits {
+  requestsPerMinute: number
+  requestsPerDay: number
+}
+
+const TIER_LIMITS: Record<string, TierLimits> = {
+  free: { requestsPerMinute: 5, requestsPerDay: 100 },
+  starter: { requestsPerMinute: 20, requestsPerDay: 1000 },
+  pro: { requestsPerMinute: 60, requestsPerDay: 5000 },
+  enterprise: { requestsPerMinute: 200, requestsPerDay: 50000 }
+}
+
+// In-memory store for tier-based limiting (simple fallback)
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>()
+
+function cleanupExpiredEntries() {
+  const now = Date.now()
+  for (const [key, value] of rateLimitStore.entries()) {
+    if (value.resetAt < now) {
+      rateLimitStore.delete(key)
+    }
+  }
+}
+
+export async function checkRateLimitByTier(
+  clientId: string,
+  tier: string
+): Promise<{ allowed: boolean; remaining: number; resetAt: Date; resetInMs: number }> {
+  const limits = TIER_LIMITS[tier] || TIER_LIMITS.free
+
+  const minuteResult = await checkRateLimit(
+    `minute:${clientId}`,
+    limits.requestsPerMinute,
+    60_000
+  )
+
+  if (!minuteResult.allowed) {
+    return {
+      ...minuteResult,
+      resetInMs: minuteResult.resetAt.getTime() - Date.now()
+    }
+  }
+
+  const dayResult = await checkRateLimit(
+    `day:${clientId}`,
+    limits.requestsPerDay,
+    86400_000
+  )
+
+  return {
+    ...dayResult,
+    resetInMs: dayResult.resetAt.getTime() - Date.now()
+  }
+}
+
+export function getTierLimits(tier: string): TierLimits {
+  return TIER_LIMITS[tier] || TIER_LIMITS.free
+}
+
+export function getAllTiers(): Record<string, TierLimits> {
+  return { ...TIER_LIMITS }
+}

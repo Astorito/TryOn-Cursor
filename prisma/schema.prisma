@@ -19,6 +19,14 @@ model Client {
   website   String?
   active    Boolean  @default(true)
   limit     Int      @default(5000)
+  
+  // Información financiera
+  tier              String   @default("free") // free, starter, professional, enterprise
+  credits           Int      @default(0) // Créditos totales comprados
+  creditsUsed       Int      @default(0) // Créditos consumidos
+  lastPurchaseDate  DateTime?
+  monthlyRevenue    Float    @default(0) // Ingresos mensuales por suscripción
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -29,6 +37,7 @@ model Client {
 
   @@index([apiKey])
   @@index([active])
+  @@index([tier])
 }
 
 // Dominios permitidos por cliente (para CORS)
@@ -47,7 +56,7 @@ model Generation {
   id       String           @id @default(cuid())
   clientId String
   status   GenerationStatus @default(QUEUED)
-  model    String           @default("fal-ai/nano-banana-pro/edit")
+  model    String           @default("fal-ai/fashn/tryon/v1.6")
 
   // Inputs
   personImageUrl String

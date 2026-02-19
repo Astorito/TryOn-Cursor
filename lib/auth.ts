@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
-import type { Client } from "@prisma/client";
+import type { Client, AllowedDomain } from "@prisma/client";
+import jwt from 'jsonwebtoken'
 
 /**
  * Validación de API Keys contra la tabla Client en Supabase (PostgreSQL + Prisma).
@@ -10,7 +11,7 @@ import type { Client } from "@prisma/client";
 
 export interface AuthResult {
   valid: boolean;
-  client: Client | null;
+  client: (Client & { allowedDomains?: AllowedDomain[] }) | null;
   error?: string;
 }
 
@@ -26,6 +27,7 @@ export async function validateApiKey(apiKey: string): Promise<AuthResult> {
   try {
     const client = await prisma.client.findUnique({
       where: { apiKey },
+      include: { allowedDomains: true }
     });
 
     if (!client) {
@@ -50,4 +52,48 @@ export function generateApiKey(): string {
   const timestamp = Date.now().toString(36);
   const random = Math.random().toString(36).substring(2, 10);
   return `tryon_${timestamp}_${random}`;
+}
+
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_dev_secret_change_in_production'
+
+/**
+ * Crea un token JWT para admin
+ */
+export function createAdminToken(): string {
+  return jwt.sign(
+    {
+      role: 'admin',
+      iat: Math.floor(Date.now() / 1000)
+    },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  )
+}
+
+/**
+ * Verifica un token JWT de admin
+ */
+export function verifyAdminToken(token: string): boolean {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any
+    return decoded.role === 'admin'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Valida credenciales de admin
+ */
+export function validateAdminCredentials(username: string, password: string): boolean {
+  if (!process.env.ADMIN_PASSWORD) {
+    console.error('ADMIN_PASSWORD not configured in environment variables')
+    throw new Error('ADMIN_PASSWORD no está configurado en las variables de entorno')
+  }
+
+  if (username !== 'admin') {
+    return false
+  }
+
+  return password === process.env.ADMIN_PASSWORD
 }

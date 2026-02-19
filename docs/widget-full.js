@@ -116,9 +116,9 @@
     fab.onmouseout = () => fab.style.transform = 'translateY(0)';
     wrapper.appendChild(fab);
 
-    // Overlay
+    // Overlay (visual dimming kept, but allow pointer events to pass through the page)
     overlay = document.createElement('div');
-    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 999998; display: none;';
+    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); pointer-events: none; z-index: 999998; display: none;';
     wrapper.appendChild(overlay);
 
     // Main panel
@@ -397,12 +397,29 @@
         transition: width 0.5s ease;
       }
 
+      .tryon-result-image-container {
+        position: relative;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
       .tryon-result-image {
         width: 100%;
         max-height: calc(100vh - 300px);
         object-fit: contain;
         border-radius: 12px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        transition: transform 0.1s ease;
+        cursor: zoom-in;
+        transform-origin: center center;
+      }
+
+      .tryon-result-image.zoomed {
+        transform: scale(2);
+        cursor: zoom-out;
       }
 
       .tryon-close-btn {
@@ -454,9 +471,9 @@
       }
 
       .tryon-thumbnail {
-        width: 80px;
-        height: 80px;
-        border-radius: 12px;
+        width: 60px;
+        height: 60px;
+        border-radius: 10px;
         border: 2px solid #e5e7eb;
         overflow: hidden;
         background: #f8fafc;
@@ -470,12 +487,12 @@
 
       .tryon-try-again-btn {
         width: 100%;
-        height: 56px;
+        height: 48px;
         background: linear-gradient(135deg, #fbbf24, #f59e0b);
         color: white;
         border: none;
-        border-radius: 16px;
-        font-size: 16px;
+        border-radius: 12px;
+        font-size: 14px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
@@ -541,7 +558,6 @@
 
   function attachEvents() {
     fab.onclick = openPanel;
-    overlay.onclick = closePanel;
   }
 
   function openPanel() {
@@ -972,11 +988,16 @@
     const usedGarments = state.garments.filter(g => g !== null).length;
     const addMoreButton = usedGarments < 3 ? '<div class="tryon-thumbnail tryon-add-more add-more-btn"><span>+</span></div>' : '';
 
+    // Use proxy to avoid CORS/CSP issues with FAL images
+    const proxiedResultUrl = BACKEND_URL + '/api/proxy?url=' + encodeURIComponent(state.resultUrl);
+
     panel.innerHTML = `
       <button class="tryon-close-btn close-result-btn">×</button>
       <div style="height: 100%; display: flex; flex-direction: column;">
-        <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px 24px 0 24px;">
-          <img src="${state.resultUrl}" alt="Try-on result" class="tryon-result-image" />
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px 24px 0 24px; overflow: hidden;">
+          <div class="tryon-result-image-container">
+            <img src="${proxiedResultUrl}" alt="Try-on result" class="tryon-result-image" crossorigin="anonymous" />
+          </div>
         </div>
 
         <div class="tryon-images-used">
@@ -1021,6 +1042,53 @@
         panel.style.display = 'flex';
         renderPanel();
       };
+    }
+
+    // Add zoom functionality to result image
+    const resultImage = shadowQuerySelector('.tryon-result-image');
+    const imageContainer = shadowQuerySelector('.tryon-result-image-container');
+    
+    if (resultImage && imageContainer) {
+      let isZoomed = false;
+
+      resultImage.addEventListener('click', function(e) {
+        isZoomed = !isZoomed;
+        
+        if (isZoomed) {
+          resultImage.classList.add('zoomed');
+          // Calculate initial zoom position based on click
+          updateZoomPosition(e);
+        } else {
+          resultImage.classList.remove('zoomed');
+          resultImage.style.transformOrigin = 'center center';
+        }
+      });
+
+      resultImage.addEventListener('mousemove', function(e) {
+        if (isZoomed) {
+          updateZoomPosition(e);
+        }
+      });
+
+      resultImage.addEventListener('mouseleave', function() {
+        if (isZoomed) {
+          isZoomed = false;
+          resultImage.classList.remove('zoomed');
+          resultImage.style.transformOrigin = 'center center';
+        }
+      });
+
+      function updateZoomPosition(e) {
+        const rect = resultImage.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        
+        // Constrain the zoom to keep it within visible bounds
+        const constrainedX = Math.max(25, Math.min(75, x));
+        const constrainedY = Math.max(25, Math.min(75, y));
+        
+        resultImage.style.transformOrigin = `${constrainedX}% ${constrainedY}%`;
+      }
     }
   }
 

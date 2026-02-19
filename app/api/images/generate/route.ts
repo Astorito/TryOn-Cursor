@@ -5,10 +5,12 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { FalClient } from "@/lib/fal-client";
 import { corsJson } from "@/lib/cors";
 
-const falClient = new FalClient(process.env.FAL_KEY || "");
+// FAL Client ya tiene la config top-level, no necesita apiKey en constructor
+const falClient = new FalClient();
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/images/generate
@@ -42,8 +44,10 @@ export async function POST(request: NextRequest) {
       garments,
       personImageUrl,
       garmentImageUrl,
-      model = "fal-ai/gemini-3-pro-image-preview/edit",
     } = body;
+
+    // Forzar uso del modelo Fashn try-on v1.6 en todas las generaciones
+    const modelUsed = 'fal-ai/fashn/tryon/v1.6';
 
     // #region agent log
     _log('POST body parsed', { hasApiKey: !!apiKey, userImageLen: typeof userImage === 'string' ? userImage.length : 0, garmentsCount: Array.isArray(garments) ? garments.length : 0, hasFalKey: !!process.env.FAL_KEY });
@@ -72,8 +76,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Authenticate ──
-    const authResult = await validateApiKey(apiKey);
+    // ── Authenticate, Rate limit y Check usage en paralelo (queries independientes) ──
+    const [authResult, rateLimitResult, generationCount] = await Promise.all([
+      validateApiKey(apiKey),
+      checkRateLimit(`client_temp`, 10, 60_000), // Temporarily use 'client_temp', will update after auth
+      Promise.resolve(0) // Placeholder - will query after we have clientId
+    ]);
+
     if (!authResult.valid || !authResult.client) {
       return corsJson(
         { success: false, error: authResult.error || "API key inválida" },
@@ -83,15 +92,15 @@ export async function POST(request: NextRequest) {
 
     const client = authResult.client;
 
-    // ── Rate limit (10 req/min) ──
-    const rateLimitResult = await checkRateLimit(
+    // ── Now check rate limit with actual client ID ──
+    const actualRateLimit = await checkRateLimit(
       `client_${client.id}`,
       10,
       60_000
     );
-    if (!rateLimitResult.allowed) {
+    if (!actualRateLimit.allowed) {
       const waitSec = Math.ceil(
-        (rateLimitResult.resetAt.getTime() - Date.now()) / 1000
+        (actualRateLimit.resetAt.getTime() - Date.now()) / 1000
       );
       return corsJson(
         {
@@ -102,12 +111,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Check usage limit ──
-    const generationCount = await prisma.generation.count({
+    // ── Check usage limit (now that we have client) ──
+    const actualGenerationCount = await prisma.generation.count({
       where: { clientId: client.id },
     });
 
-    if (client.limit > 0 && generationCount >= client.limit) {
+    if (client.limit > 0 && actualGenerationCount >= client.limit) {
       return corsJson(
         { success: false, error: "Límite de generaciones alcanzado" },
         403
@@ -125,7 +134,7 @@ export async function POST(request: NextRequest) {
       data: {
         clientId: client.id,
         status: "PROCESSING",
-        model,
+        model: modelUsed,
         personImageUrl: (personImageUrl || userImage || '').substring(0, 200), // Store truncated ref
         garmentUrls: (garments && garments.length ? garments.map((g: string) => g.substring(0, 200)) : [(garmentImageUrl || '') .substring(0,200)]),
         startedAt: new Date(),
@@ -140,47 +149,55 @@ export async function POST(request: NextRequest) {
       const personImg = personImageUrl || userImage;
       const garmentImg = garmentImageUrl || (garments && garments[0]);
 
-      // Prompt defaults (ultra rápida)
-      const PROMPT = "Place the garment from the second image onto the person in the first image, maintaining realistic fit, natural draping, and proper lighting. Keep the person's pose and background unchanged.";
-      const NEGATIVE_PROMPT = "deformed, distorted, disfigured, poor quality, blurry, unrealistic proportions, bad anatomy, wrong clothing placement, floating clothes";
-
-      // ── Call FAL AI ──
+      // ── Call FAL AI SeedDream v4 Edit ──
+      console.log(`[${requestId}] Preparing FAL payload. personImg isData:${typeof personImg === 'string' ? personImg.startsWith('data:') : false} personLen:${typeof personImg === 'string' ? personImg.length : 0} garmentLen:${typeof garmentImg === 'string' ? garmentImg.length : 0}`);
       const falStartTime = Date.now();
-      const falResult = await falClient.generate({
-        personImageUrl: personImg,
-        garmentImageUrl: garmentImg,
-        prompt: PROMPT,
-        negative_prompt: NEGATIVE_PROMPT,
-        strength: 0.65,
-        guidance_scale: 7.0,
-        num_inference_steps: 20,
-        output_format: "jpeg",
-        seed: Math.floor(Math.random() * 1000000),
-      });
+      let falResult;
+      try {
+        falResult = await falClient.generate({
+          personImageUrl: personImg,
+          garmentImageUrl: garmentImg,
+          seed: Math.floor(Math.random() * 1000000),
+          enhance_prompt_mode: 'fast',
+        });
+      } catch (err) {
+        console.error(`[${requestId}] falClient.generate threw error:`, err);
+        // Si el error incluye status/body (viene del SDK), imprimirlos
+        const e = err as any;
+        try {
+          console.error(`[${requestId}] fal error status:`, e?.status);
+          if (e?.body) {
+            console.error(`[${requestId}] fal error body:`, typeof e.body === 'object' ? JSON.stringify(e.body, null, 2) : e.body);
+          }
+        } catch (logErr) {
+          console.error(`[${requestId}] Error logging fal error details:`, logErr);
+        }
+        throw err;
+      }
       const falDuration = Date.now() - falStartTime;
 
-      // ── Update generation with success ──
-      await prisma.generation.update({
-        where: { id: generation.id },
-        data: {
-          status: "COMPLETED",
-          resultUrl: falResult.imageUrl,
-          durationMs: Date.now() - startTime,
-          falDurationMs: falDuration,
-          completedAt: new Date(),
-        },
-      });
-
-      // ── Record metric ──
-      await prisma.metric.create({
-        data: {
-          type: "GENERATION",
-          clientId: client.id,
-          model,
-          durationMs: Date.now() - startTime,
-          status: "success",
-        },
-      });
+      // ── Update generation with success + Record metric en paralelo ──
+      await Promise.all([
+        prisma.generation.update({
+          where: { id: generation.id },
+          data: {
+            status: "COMPLETED",
+            resultUrl: falResult.imageUrl,
+            durationMs: Date.now() - startTime,
+            falDurationMs: falDuration,
+            completedAt: new Date(),
+          },
+        }),
+        prisma.metric.create({
+          data: {
+            type: "GENERATION",
+            clientId: client.id,
+            model: modelUsed,
+            durationMs: Date.now() - startTime,
+            status: "success",
+          },
+        })
+      ]);
 
       console.log(
         `[${requestId}] Generation completed in ${Date.now() - startTime}ms`
@@ -203,35 +220,37 @@ export async function POST(request: NextRequest) {
       const _e = falError as Error;
       _log('falError catch', { errorMessage: _e?.message, name: _e?.name });
       // #endregion
-      // Update generation with error
-      await prisma.generation.update({
-        where: { id: generation.id },
-        data: {
-          status: "ERROR",
-          error:
-            falError instanceof Error ? falError.message : "FAL AI error",
-          durationMs: Date.now() - startTime,
-          completedAt: new Date(),
-        },
-      });
-
-      // Record error metric
-      await prisma.metric.create({
-        data: {
-          type: "GENERATION",
-          clientId: client.id,
-          model,
-          durationMs: Date.now() - startTime,
-          status: "error",
-          error:
-            falError instanceof Error ? falError.message : "FAL AI error",
-        },
-      });
-
+      
       const isUnauthorized = falError instanceof Error && /unauthorized|invalid.*key|authentication/i.test(falError.message);
       const userError = isUnauthorized
         ? "FAL_KEY inválida o sin permisos. Verificá tu API key en fal.ai/dashboard/keys"
         : "Error al generar la imagen";
+      
+      // Update generation with error + Record error metric en paralelo
+      await Promise.all([
+        prisma.generation.update({
+          where: { id: generation.id },
+          data: {
+            status: "ERROR",
+            error:
+              falError instanceof Error ? falError.message : "FAL AI error",
+            durationMs: Date.now() - startTime,
+            completedAt: new Date(),
+          },
+        }),
+        prisma.metric.create({
+          data: {
+            type: "GENERATION",
+            clientId: client.id,
+            model: modelUsed,
+            durationMs: Date.now() - startTime,
+            status: "error",
+            error:
+              falError instanceof Error ? falError.message : "FAL AI error",
+          },
+        })
+      ]);
+
       return corsJson(
         { success: false, error: userError },
         500
