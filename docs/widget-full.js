@@ -116,9 +116,9 @@
     fab.onmouseout = () => fab.style.transform = 'translateY(0)';
     wrapper.appendChild(fab);
 
-    // Overlay (invisible but for event interception)
+    // Overlay (invisible but receives drag events)
     overlay = document.createElement('div');
-    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: transparent; display: none; pointer-events: none;';
+    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: transparent; display: none; pointer-events: auto;';
     wrapper.appendChild(overlay);
 
     // Main panel
@@ -659,33 +659,68 @@
       submitBtn.style.transform = 'translateY(0)';
     };
 
+    // Add drag & drop listeners to overlay for external drags
+    overlay.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    }, false);
+
+    overlay.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'copy';
+    }, false);
+
+    overlay.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    }, false);
+
+    overlay.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (e.dataTransfer.files.length > 0) {
+        var file = e.dataTransfer.files[0];
+        // Default to first empty garment slot
+        var targetIndex = state.garments.findIndex(g => g === null);
+        if (targetIndex === -1) targetIndex = 0;
+        handleFileFromDrop(file, 'garment', targetIndex);
+      }
+    }, false);
+
     // Add global drag & drop interception for external drag sources
     setupGlobalDragDrop();
   }
 
   function setupGlobalDragDrop() {
-    // Prevent drag default behavior globally
+    // Intercept drag events globally using capture phase
+    document.addEventListener('dragenter', function(e) {
+      if (!state.isOpen) return;
+      e.preventDefault();
+      e.stopPropagation();
+    }, true);
+
     document.addEventListener('dragover', function(e) {
-      if (state.isOpen && container._dragTargets) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
+      if (!state.isOpen) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'copy';
     }, true);
 
     document.addEventListener('drop', function(e) {
-      if (state.isOpen && container._dragTargets && e.dataTransfer.files.length > 0) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // Try to find the closest target element in panel
-        var file = e.dataTransfer.files[0];
-        
-        // Default to first empty garment slot
-        var targetIndex = state.garments.findIndex(g => g === null);
-        if (targetIndex === -1) targetIndex = 0;
-        
-        handleFileFromDrop(file, 'garment', targetIndex);
-      }
+      if (!state.isOpen || !e.dataTransfer.files.length) return;
+      
+      e.preventDefault();
+      e.stopPropagation();
+      
+      var file = e.dataTransfer.files[0];
+      
+      // Default to first empty garment slot
+      var targetIndex = state.garments.findIndex(g => g === null);
+      if (targetIndex === -1) targetIndex = 0;
+      
+      handleFileFromDrop(file, 'garment', targetIndex);
     }, true);
   }
 
@@ -744,19 +779,22 @@
   }
 
   function addDragDrop(element, type, index) {
-    // Store reference for external drag handling
-    if (!container._dragTargets) {
-      container._dragTargets = [];
-    }
-    container._dragTargets.push({ element, type, index });
-
-    element.addEventListener('dragover', function(e) {
+    element.addEventListener('dragenter', function(e) {
       e.preventDefault();
       e.stopPropagation();
       element.style.borderColor = '#667eea';
       element.style.background = '#f0f4ff';
       element.style.transform = 'translateY(-1px)';
-    }, true);
+    }, false);
+
+    element.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'copy';
+      element.style.borderColor = '#667eea';
+      element.style.background = '#f0f4ff';
+      element.style.transform = 'translateY(-1px)';
+    }, false);
 
     element.addEventListener('dragleave', function(e) {
       e.preventDefault();
@@ -764,7 +802,7 @@
       element.style.borderColor = element.classList.contains('has-image') ? '#10b981' : '#e0e7ff';
       element.style.background = element.classList.contains('has-image') ? '#f0fdf4' : '#f8fafc';
       element.style.transform = 'translateY(0)';
-    }, true);
+    }, false);
 
     element.addEventListener('drop', function(e) {
       e.preventDefault();
@@ -774,8 +812,10 @@
       element.style.transform = 'translateY(0)';
 
       var file = e.dataTransfer.files[0];
-      handleFileFromDrop(file, type, index);
-    }, true);
+      if (file) {
+        handleFileFromDrop(file, type, index);
+      }
+    }, false);
   }
 
   function updateUserUploadBox(hasImage, imageSrc = null) {
