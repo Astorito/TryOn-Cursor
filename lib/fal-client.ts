@@ -107,7 +107,7 @@ export class FalClient {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await fal.subscribe(model, {
-        input: falInput as unknown as import('@fal-ai/client').FashnTryonV16Input,
+        input: falInput as any,
         logs: true,
         onQueueUpdate: (update) => {
           if (update.status === 'IN_PROGRESS') {
