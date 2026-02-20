@@ -12,24 +12,20 @@ export interface FalGenerationInput {
   garmentImageUrl: string
   seed?: number
   enhance_prompt_mode?: 'standard' | 'fast'
-  // fashn/tryon/v1.6 specific options
-  model_type?: 'leffa' | 'ootd' | 'idm'              // Default: 'ootd'
-  garment_photo_type?: 'auto' | 'flat-lay' | 'model'  // Default: 'auto'
-  nsfw_filter?: boolean                                // Default: true
-  cover_feet?: boolean                                 // Default: false
-  adjust_hands?: boolean                               // Default: false
-  restore_background?: boolean                         // Default: false
-  restore_clothes?: boolean                            // Default: false
-  long_top?: boolean                                   // Default: false
+  model_type?: 'leffa' | 'ootd' | 'idm'
+  garment_photo_type?: 'auto' | 'flat-lay' | 'model'
+  nsfw_filter?: boolean
+  cover_feet?: boolean
+  adjust_hands?: boolean
+  restore_background?: boolean
+  restore_clothes?: boolean
+  long_top?: boolean
   timestep_spacing?: 'trailing' | 'linear'
-  guidance_scale?: number                              // Default: 2.5
-  num_inference_steps?: number                         // Default: 50
+  guidance_scale?: number
+  num_inference_steps?: number
   output_format?: 'png' | 'jpeg' | 'webp'
 }
 
-/**
- * Cliente para interactuar con FAL AI usando fashn/tryon/v1.6
- */
 export class FalClient {
   private apiKey?: string;
 
@@ -37,10 +33,6 @@ export class FalClient {
     this.apiKey = apiKey || process.env.FAL_KEY;
   }
 
-  /**
-   * Convierte base64 data URL a Buffer y lo sube a FAL.ai storage.
-   * Si ya es una URL pública, la retorna directamente.
-   */
   private async uploadImage(base64OrUrl: string): Promise<string> {
     if (!base64OrUrl.startsWith('data:')) {
       return base64OrUrl;
@@ -55,7 +47,6 @@ export class FalClient {
       const buffer = Buffer.from(base64Data, 'base64');
       const ext = mimeType.split('/')[1] || 'jpg';
 
-      // Escribir a archivo temporal
       const tmpPath = path.join(
         os.tmpdir(),
         `tryon_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
@@ -92,25 +83,31 @@ export class FalClient {
     const model = 'fal-ai/fashn/tryon/v1.6';
     console.log('[FalClient] Calling model:', model);
 
+    // Construimos el payload como Record para evitar el chequeo estricto
+    // de tipos del SDK (FashnTryonV16Input no expone todas las propiedades)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const falInput: Record<string, any> = {
+      model_image: personImageUrl,
+      garment_image: garmentImageUrl,
+      model_type: input.model_type ?? 'ootd',
+      garment_photo_type: input.garment_photo_type ?? 'auto',
+      nsfw_filter: input.nsfw_filter ?? true,
+      cover_feet: input.cover_feet ?? false,
+      adjust_hands: input.adjust_hands ?? false,
+      restore_background: input.restore_background ?? false,
+      restore_clothes: input.restore_clothes ?? false,
+      long_top: input.long_top ?? false,
+      guidance_scale: input.guidance_scale ?? 2.5,
+      num_inference_steps: input.num_inference_steps ?? 50,
+      ...(input.seed !== undefined ? { seed: input.seed } : {}),
+      ...(input.output_format ? { output_format: input.output_format } : {}),
+      ...(input.timestep_spacing ? { timestep_spacing: input.timestep_spacing } : {}),
+    };
+
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await fal.subscribe(model, {
-        input: {
-          model_image: personImageUrl,
-          garment_image: garmentImageUrl,
-          model_type: input.model_type ?? 'ootd',
-          garment_photo_type: input.garment_photo_type ?? 'auto',
-          nsfw_filter: input.nsfw_filter ?? true,
-          cover_feet: input.cover_feet ?? false,
-          adjust_hands: input.adjust_hands ?? false,
-          restore_background: input.restore_background ?? false,
-          restore_clothes: input.restore_clothes ?? false,
-          long_top: input.long_top ?? false,
-          guidance_scale: input.guidance_scale ?? 2.5,
-          num_inference_steps: input.num_inference_steps ?? 50,
-          ...(input.seed !== undefined ? { seed: input.seed } : {}),
-          ...(input.output_format ? { output_format: input.output_format } : {}),
-          ...(input.timestep_spacing ? { timestep_spacing: input.timestep_spacing } : {}),
-        },
+        input: falInput,
         logs: true,
         onQueueUpdate: (update) => {
           if (update.status === 'IN_PROGRESS') {
@@ -137,7 +134,6 @@ export class FalClient {
       } else if (result?.output?.image?.url) {
         imageUrl = result.output.image.url;
       } else {
-        // Búsqueda recursiva como último recurso
         const findUrl = (obj: Record<string, unknown>): string | undefined => {
           for (const [key, value] of Object.entries(obj)) {
             if (key === 'url' && typeof value === 'string' && value.startsWith('http')) {
