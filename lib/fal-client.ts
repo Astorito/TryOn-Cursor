@@ -10,20 +10,13 @@ export interface FalGenerationResult {
 export interface FalGenerationInput {
   personImageUrl: string
   garmentImageUrl: string
+  // SeedDream v4 edit options
+  prompt?: string
+  num_images?: number
   seed?: number
   enhance_prompt_mode?: 'standard' | 'fast'
-  model_type?: 'leffa' | 'ootd' | 'idm'
-  garment_photo_type?: 'auto' | 'flat-lay' | 'model'
-  nsfw_filter?: boolean
-  cover_feet?: boolean
-  adjust_hands?: boolean
-  restore_background?: boolean
-  restore_clothes?: boolean
-  long_top?: boolean
-  timestep_spacing?: 'trailing' | 'linear'
-  guidance_scale?: number
-  num_inference_steps?: number
-  output_format?: 'png' | 'jpeg' | 'webp'
+  enable_safety_checker?: boolean
+  image_size?: 'square_hd' | 'square' | 'portrait_4_3' | 'portrait_16_9' | 'landscape_4_3' | 'landscape_16_9' | 'auto' | 'auto_2K' | 'auto_4K'
 }
 
 export class FalClient {
@@ -33,6 +26,10 @@ export class FalClient {
     this.apiKey = apiKey || process.env.FAL_KEY;
   }
 
+  /**
+   * Sube una imagen base64 a FAL.ai storage y retorna la URL pública.
+   * Si ya es una URL, la retorna directamente.
+   */
   private async uploadImage(base64OrUrl: string): Promise<string> {
     if (!base64OrUrl.startsWith('data:')) {
       return base64OrUrl;
@@ -73,6 +70,7 @@ export class FalClient {
     }
     fal.config({ credentials });
 
+    // Subir persona y prenda en paralelo
     console.log('[FalClient] Uploading images to FAL.ai storage...');
     const [personImageUrl, garmentImageUrl] = await Promise.all([
       this.uploadImage(input.personImageUrl),
@@ -80,28 +78,23 @@ export class FalClient {
     ]);
     console.log('[FalClient] Images uploaded:', { personImageUrl, garmentImageUrl });
 
-    const model = 'fal-ai/fashn/tryon/v1.6';
+    const model = 'fal-ai/bytedance/seedream/v4/edit';
     console.log('[FalClient] Calling model:', model);
 
-    // Construimos el payload como Record para evitar el chequeo estricto
-    // de tipos del SDK (FashnTryonV16Input no expone todas las propiedades)
+    // SeedDream v4 edit: recibe image_urls[] + prompt
+    // Primero la prenda, luego la persona (orden recomendado para virtual try-on)
+    const prompt = input.prompt ||
+      'Dress the person in the garment shown. Keep the person\'s face, hair, skin tone, and body position exactly the same. Only replace the clothing with the garment provided. Make it look natural and realistic.';
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const falInput: Record<string, any> = {
-      model_image: personImageUrl,
-      garment_image: garmentImageUrl,
-      model_type: input.model_type ?? 'ootd',
-      garment_photo_type: input.garment_photo_type ?? 'auto',
-      nsfw_filter: input.nsfw_filter ?? true,
-      cover_feet: input.cover_feet ?? false,
-      adjust_hands: input.adjust_hands ?? false,
-      restore_background: input.restore_background ?? false,
-      restore_clothes: input.restore_clothes ?? false,
-      long_top: input.long_top ?? false,
-      guidance_scale: input.guidance_scale ?? 2.5,
-      num_inference_steps: input.num_inference_steps ?? 50,
+      prompt,
+      image_urls: [personImageUrl, garmentImageUrl],
+      num_images: input.num_images ?? 1,
+      enhance_prompt_mode: input.enhance_prompt_mode ?? 'fast',
+      enable_safety_checker: input.enable_safety_checker ?? true,
       ...(input.seed !== undefined ? { seed: input.seed } : {}),
-      ...(input.output_format ? { output_format: input.output_format } : {}),
-      ...(input.timestep_spacing ? { timestep_spacing: input.timestep_spacing } : {}),
+      ...(input.image_size ? { image_size: input.image_size } : {}),
     };
 
     try {
@@ -118,7 +111,6 @@ export class FalClient {
         data?: { images?: Array<{ url: string }> };
         images?: Array<{ url: string }>;
         image?: { url: string };
-        output?: { image?: { url: string } };
       };
 
       console.log('[FalClient] Response preview:', JSON.stringify(result).substring(0, 500));
@@ -131,9 +123,8 @@ export class FalClient {
         imageUrl = result.images[0].url;
       } else if (result?.image?.url) {
         imageUrl = result.image.url;
-      } else if (result?.output?.image?.url) {
-        imageUrl = result.output.image.url;
       } else {
+        // Búsqueda recursiva como último recurso
         const findUrl = (obj: Record<string, unknown>): string | undefined => {
           for (const [key, value] of Object.entries(obj)) {
             if (key === 'url' && typeof value === 'string' && value.startsWith('http')) {
