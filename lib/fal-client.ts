@@ -1,4 +1,7 @@
 import { fal } from '@fal-ai/client'
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
 export interface FalGenerationResult {
   imageUrl: string
@@ -37,15 +40,32 @@ export class FalClient {
   private base64ToBlob(base64: string): Blob {
     const parts = base64.split(';base64,');
     const contentType = parts[0].split(':')[1] || 'image/jpeg';
-    const raw = atob(parts[1]);
-    const rawLength = raw.length;
-    const uInt8Array = new Uint8Array(rawLength);
-    
-    for (let i = 0; i < rawLength; ++i) {
-      uInt8Array[i] = raw.charCodeAt(i);
+
+    // En Node.js usamos Buffer, en navegadores usamos atob
+    let data: Uint8Array | Buffer;
+    if (typeof Buffer !== 'undefined') {
+      data = Buffer.from(parts[1], 'base64');
+    } else {
+      const raw = atob(parts[1]);
+      const rawLength = raw.length;
+      const uInt8Array = new Uint8Array(rawLength);
+      for (let i = 0; i < rawLength; ++i) {
+        uInt8Array[i] = raw.charCodeAt(i);
+      }
+      data = uInt8Array;
     }
-    
-    return new Blob([uInt8Array], { type: contentType });
+
+    // Preferir File cuando esté disponible (navegador). En Node usamos Blob si existe, o pasamos el Buffer.
+    if (typeof File !== 'undefined') {
+      return new File([data as any], 'image.jpg', { type: contentType }) as unknown as Blob;
+    }
+    if (typeof Blob !== 'undefined') {
+      return new Blob([data as any], { type: contentType });
+    }
+
+    // Fallback: envolver Buffer en Blob-like usando Uint8Array
+    const fallback = data instanceof Buffer ? new Uint8Array(data) : data;
+    return new Blob([fallback as any], { type: contentType });
   }
 
   /**
@@ -58,10 +78,35 @@ export class FalClient {
         return base64;
       }
 
-      const blob = this.base64ToBlob(base64);
-      const file = new File([blob], 'image.jpg', { type: 'image/jpeg' });
-      
-      const uploadedUrl = await fal.storage.upload(file);
+      // En entornos Node intentamos subir como stream desde un archivo temporal
+      if (typeof Buffer !== 'undefined' && fs && fs.createWriteStream) {
+        const parts = base64.split(';base64,');
+        const contentType = parts[0].split(':')[1] || 'image/jpeg';
+        const ext = contentType.split('/')[1] || 'jpg';
+        const tmpName = `tryon-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const tmpPath = path.join(os.tmpdir(), tmpName);
+
+        // Escribir buffer al archivo temporal
+        const buffer = Buffer.from(parts[1], 'base64');
+        await fs.promises.writeFile(tmpPath, buffer);
+
+        try {
+          const stream = fs.createReadStream(tmpPath);
+          const uploadedUrl = await fal.storage.upload(stream as any);
+          return uploadedUrl;
+        } finally {
+          // Intentar limpiar el archivo temporal
+          try {
+            await fs.promises.unlink(tmpPath);
+          } catch (cleanupErr) {
+            console.warn('Could not remove temp file', tmpPath, cleanupErr);
+          }
+        }
+      }
+
+      // Fallback: usar File/Blob o Buffer según la plataforma
+      const blobOrFile = this.base64ToBlob(base64);
+      const uploadedUrl = await fal.storage.upload(blobOrFile as any);
       return uploadedUrl;
     } catch (error) {
       console.error('Error uploading image to FAL:', error);

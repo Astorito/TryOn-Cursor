@@ -32,8 +32,8 @@
     footerHeight: 70,
     horizontalPadding: 20,
     verticalGap: 12,
-    userBoxHeight: 180,  // Fixed height for user image
-    garmentBoxSize: 85  // Fixed size for garments (3 boxes = 85*3 + 12*2 gaps = 279px fits in 280px)
+    userBoxHeight: 180,
+    garmentBoxSize: 85
   };
 
   // Helper function to query shadow DOM
@@ -43,9 +43,7 @@
 
   // Return fixed box sizes
   function calculateBoxSizes() {
-    // Calculate userBoxWidth to fit panel width minus padding
     const userBoxWidth = layoutConfig.panelWidth - (layoutConfig.horizontalPadding * 2);
-    
     return {
       userBoxWidth: userBoxWidth,
       userBoxHeight: layoutConfig.userBoxHeight,
@@ -54,15 +52,15 @@
     };
   }
 
-  // Loading phases
+  // Loading phases — FIX: added description to every phase
   const loadingPhases = [
-    { text: 'Analyzing',  duration: 3000 },
-    { text: 'Adjusting',  duration: 3000 },
-    { text: 'Applying', duration: 4000 },
-    { text: 'Finalizing', duration: Infinity }
+    { text: 'Analyzing',  description: 'Reading your photo and garment details...', duration: 3000 },
+    { text: 'Adjusting',  description: 'Fitting the garment to your measurements...', duration: 3000 },
+    { text: 'Applying',   description: 'Applying the garment to your image...', duration: 4000 },
+    { text: 'Finalizing', description: 'Adding the finishing touches...', duration: Infinity }
   ];
 
-  // Image compression functionssd
+  // Image compression
   function compressImage(base64, maxHeight, quality) {
     return new Promise(function(resolve) {
       var img = new Image();
@@ -94,21 +92,17 @@
   }
 
   function createElements() {
-    // Create container
     container = document.createElement('div');
     container.id = WIDGET_ID;
     container.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2147483647; pointer-events: none;';
     document.body.appendChild(container);
 
-    // Create Shadow DOM
     var shadow = container.attachShadow({ mode: 'open' });
 
-    // Create wrapper inside shadow root
     var wrapper = document.createElement('div');
     wrapper.style.cssText = 'all: initial; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;';
     shadow.appendChild(wrapper);
 
-    // Floating Action Button
     fab = document.createElement('button');
     fab.innerHTML = '✨ Try Look';
     fab.style.cssText = 'position: fixed; bottom: 24px; right: 24px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 28px; padding: 16px 24px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.2s; pointer-events: auto;';
@@ -116,22 +110,18 @@
     fab.onmouseout = () => fab.style.transform = 'translateY(0)';
     wrapper.appendChild(fab);
 
-    // Overlay (invisible but receives drag events)
     overlay = document.createElement('div');
     overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: transparent; display: none; pointer-events: auto;';
     wrapper.appendChild(overlay);
 
-    // Main panel
     panel = document.createElement('div');
     panel.style.cssText = 'position: fixed; bottom: 82px; right: 24px; width: ' + layoutConfig.panelWidth + 'px; height: ' + layoutConfig.panelTotalHeight + 'px; background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); display: none; overflow: hidden; flex-direction: column; transition: height 0.4s ease; pointer-events: auto;';
     wrapper.appendChild(panel);
 
-    // Loading overlay
     loadingOverlay = document.createElement('div');
     loadingOverlay.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.98); z-index: 10; display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto;';
     panel.appendChild(loadingOverlay);
 
-    // Store shadow root for later use
     container._shadowRoot = shadow;
     container._wrapper = wrapper;
 
@@ -573,7 +563,6 @@
     overlay.style.display = 'block';
     panel.style.display = 'flex';
     panel.style.animation = 'slideIn 0.3s ease';
-    // Re-attach drag listeners after panel is displayed
     setTimeout(() => setupFileInputs(), 0);
   }
 
@@ -581,12 +570,10 @@
     state.isOpen = false;
     overlay.style.display = 'none';
     panel.style.display = 'none';
-    // Reset panel height
     panel.style.height = layoutConfig.panelTotalHeight + 'px';
   }
 
   function renderPanel() {
-    // Calculate dynamic sizes
     const sizes = calculateBoxSizes();
 
     panel.innerHTML = `
@@ -627,28 +614,22 @@
       </div>
     `;
 
-    // Re-add loading overlay
     panel.appendChild(loadingOverlay);
-
-    // Attach file input events
     setupFileInputs();
   }
 
   function setupFileInputs() {
-    // Close button
     const closeBtn = shadowQuerySelector('.close-panel-btn');
     if (closeBtn) {
       closeBtn.onclick = closePanel;
     }
 
-    // User image
     const userUpload = shadowQuerySelector('#user-upload');
     if (userUpload) {
       userUpload.onclick = () => selectFile('user');
       addDragDrop(userUpload, 'user', 0);
     }
 
-    // Garments
     for (let i = 0; i < 3; i++) {
       const garmentBox = shadowQuerySelector('#garment-' + i);
       if (garmentBox) {
@@ -657,7 +638,6 @@
       }
     }
 
-    // Submit button
     const submitBtn = shadowQuerySelector('#submit-btn');
     if (submitBtn) {
       submitBtn.onclick = (e) => {
@@ -675,33 +655,17 @@
       };
     }
 
-    // Setup overlay drag listeners (only once)
     if (!overlay._dragListenerSetup) {
       overlay._dragListenerSetup = true;
-      
-      overlay.addEventListener('dragenter', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }, false);
 
-      overlay.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        e.dataTransfer.dropEffect = 'copy';
-      }, false);
-
-      overlay.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }, false);
-
+      overlay.addEventListener('dragenter', (e) => { e.preventDefault(); e.stopPropagation(); }, false);
+      overlay.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'copy'; }, false);
+      overlay.addEventListener('dragleave', (e) => { e.preventDefault(); e.stopPropagation(); }, false);
       overlay.addEventListener('drop', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
         if (e.dataTransfer.files.length > 0) {
           var file = e.dataTransfer.files[0];
-          // Default to first empty garment slot
           var targetIndex = state.garments.findIndex(g => g === null);
           if (targetIndex === -1) targetIndex = 0;
           handleFileFromDrop(file, 'garment', targetIndex);
@@ -709,41 +673,30 @@
       }, false);
     }
 
-    // Setup global drag & drop
     setupGlobalDragDrop();
   }
 
   function setupGlobalDragDrop() {
-    // Only setup once
     if (document._tryonDragSetup) return;
     document._tryonDragSetup = true;
 
-    // Intercept drag events globally using capture phase
     document.addEventListener('dragenter', function(e) {
       if (!state.isOpen) return;
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
     }, true);
 
     document.addEventListener('dragover', function(e) {
       if (!state.isOpen) return;
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
       e.dataTransfer.dropEffect = 'copy';
     }, true);
 
     document.addEventListener('drop', function(e) {
       if (!state.isOpen || !e.dataTransfer.files.length) return;
-      
-      e.preventDefault();
-      e.stopPropagation();
-      
+      e.preventDefault(); e.stopPropagation();
       var file = e.dataTransfer.files[0];
-      
-      // Default to first empty garment slot
       var targetIndex = state.garments.findIndex(g => g === null);
       if (targetIndex === -1) targetIndex = 0;
-      
       handleFileFromDrop(file, 'garment', targetIndex);
     }, true);
   }
@@ -771,8 +724,6 @@
     const reader = new FileReader();
     reader.onload = function(e) {
       const base64 = e.target.result;
-
-      // Compress image (maxHeight: 768px, quality: 0.75)
       compressImage(base64, 768, 0.75).then(function(compressedBase64) {
         if (type === 'user') {
           state.userImage = compressedBase64;
@@ -786,7 +737,6 @@
         updateSubmitButton();
       }).catch(function(error) {
         console.error('Error compressing image:', error);
-        // Fallback to original base64
         if (type === 'user') {
           state.userImage = base64;
           state.userImageFile = file;
@@ -804,16 +754,14 @@
 
   function addDragDrop(element, type, index) {
     element.addEventListener('dragenter', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
       element.style.borderColor = '#667eea';
       element.style.background = '#f0f4ff';
       element.style.transform = 'translateY(-1px)';
     }, false);
 
     element.addEventListener('dragover', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
       e.dataTransfer.dropEffect = 'copy';
       element.style.borderColor = '#667eea';
       element.style.background = '#f0f4ff';
@@ -821,24 +769,19 @@
     }, false);
 
     element.addEventListener('dragleave', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
       element.style.borderColor = element.classList.contains('has-image') ? '#10b981' : '#e0e7ff';
       element.style.background = element.classList.contains('has-image') ? '#f0fdf4' : '#f8fafc';
       element.style.transform = 'translateY(0)';
     }, false);
 
     element.addEventListener('drop', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
       element.style.borderColor = element.classList.contains('has-image') ? '#10b981' : '#e0e7ff';
       element.style.background = element.classList.contains('has-image') ? '#f0fdf4' : '#f8fafc';
       element.style.transform = 'translateY(0)';
-
       var file = e.dataTransfer.files[0];
-      if (file) {
-        handleFileFromDrop(file, type, index);
-      }
+      if (file) { handleFileFromDrop(file, type, index); }
     }, false);
   }
 
@@ -858,8 +801,6 @@
           <button class="remove-user-btn" style="position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 50%; background: white; border: none; color: black; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" title="Remove photo">×</button>
         </div>
       `;
-      
-      // Attach event listener to remove button
       const removeBtn = box.querySelector('.remove-user-btn');
       if (removeBtn) {
         removeBtn.onclick = (e) => {
@@ -898,8 +839,6 @@
           <button class="remove-garment-btn" style="position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%; background: white; border: none; color: black; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" title="Remove garment">×</button>
         </div>
       `;
-      
-      // Attach event listener to remove button
       const removeBtn = box.querySelector('.remove-garment-btn');
       if (removeBtn) {
         removeBtn.onclick = (e) => {
@@ -921,8 +860,8 @@
 
   function updateSubmitButton() {
     const submitBtn = shadowQuerySelector('#submit-btn');
-    if (!submitBtn) return; // Button might not exist if panel is showing results
-    
+    if (!submitBtn) return;
+
     const hasUserImage = !!state.userImage;
     const hasGarments = state.garments.some(g => g !== null);
 
@@ -945,14 +884,11 @@
     submitBtn.disabled = true;
     submitBtn.textContent = 'Generating...';
 
-    // Show loading overlay
     showLoading();
 
     fetch(BACKEND_URL + '/api/images/generate', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         apiKey: API_KEY,
         userImage: state.userImage,
@@ -963,7 +899,6 @@
     .then(result => {
       if (result.success) {
         state.resultUrl = result.data.resultUrl;
-        // Complete progress bar and show result
         state.loadingProgress = 100;
         updateProgressBar();
         setTimeout(() => {
@@ -998,7 +933,6 @@
   }
 
   function startLoadingAnimation() {
-    // Start progress bar animation
     const progressInterval = setInterval(() => {
       if (state.loadingProgress < 90) {
         const increment = Math.max(0.5, (90 - state.loadingProgress) / 15);
@@ -1007,21 +941,21 @@
       }
     }, 300);
 
-    // Start phase changes
     let phaseTimeout;
     function nextPhase() {
       if (state.currentLoadingPhase < loadingPhases.length - 1) {
         state.currentLoadingPhase++;
         updateLoadingText();
-        phaseTimeout = setTimeout(nextPhase, loadingPhases[state.currentLoadingPhase].duration);
+        const duration = loadingPhases[state.currentLoadingPhase].duration;
+        if (duration !== Infinity) {
+          phaseTimeout = setTimeout(nextPhase, duration);
+        }
       }
     }
 
-    // Initial text update
     updateLoadingText();
     phaseTimeout = setTimeout(nextPhase, loadingPhases[0].duration);
 
-    // Store intervals for cleanup
     loadingOverlay._progressInterval = progressInterval;
     loadingOverlay._phaseTimeout = phaseTimeout;
   }
@@ -1037,6 +971,8 @@
 
   function updateLoadingText() {
     const phase = loadingPhases[state.currentLoadingPhase];
+    // FIX: use phase.description (now defined), with a safe fallback
+    const description = phase.description || '';
     loadingOverlay.innerHTML = `
       <div class="tryon-loading-content">
         <div class="tryon-loading-icon">
@@ -1045,7 +981,7 @@
           </svg>
         </div>
         <div class="tryon-loading-text">${phase.text}</div>
-        <div class="tryon-loading-desc">${phase.description}</div>
+        <div class="tryon-loading-desc">${description}</div>
       </div>
       <div class="tryon-progress-container">
         <div class="tryon-progress-header">
@@ -1062,7 +998,6 @@
   function updateProgressBar() {
     const percentElement = loadingOverlay.querySelector('.tryon-progress-percent');
     const fillElement = loadingOverlay.querySelector('.tryon-progress-fill');
-
     if (percentElement) {
       percentElement.textContent = Math.round(state.loadingProgress) + '%';
     }
@@ -1072,22 +1007,24 @@
   }
 
   function showResult() {
-    // Expand panel height
     panel.style.height = 'calc(100vh - 100px)';
     panel.style.display = 'block';
 
-    // Create thumbnails for images used
-    const userThumbnail = state.userImage ? `<div class="tryon-thumbnail"><img src="${state.userImage}" alt="Your photo" /></div>` : '';
+    const userThumbnail = state.userImage
+      ? `<div class="tryon-thumbnail"><img src="${state.userImage}" alt="Your photo" /></div>`
+      : '';
     const garmentThumbnails = state.garments
-      .map((garment, index) => garment ? `<div class="tryon-thumbnail"><img src="${garment}" alt="Garment ${index + 1}" /></div>` : '')
+      .map((garment, index) => garment
+        ? `<div class="tryon-thumbnail"><img src="${garment}" alt="Garment ${index + 1}" /></div>`
+        : '')
       .filter(Boolean)
       .join('');
 
-    // Add "+" button if there are available slots
     const usedGarments = state.garments.filter(g => g !== null).length;
-    const addMoreButton = usedGarments < 3 ? '<div class="tryon-thumbnail tryon-add-more add-more-btn"><span>+</span></div>' : '';
+    const addMoreButton = usedGarments < 3
+      ? '<div class="tryon-thumbnail tryon-add-more add-more-btn"><span>+</span></div>'
+      : '';
 
-    // Use proxy to avoid CORS/CSP issues with FAL images
     const proxiedResultUrl = BACKEND_URL + '/api/proxy?url=' + encodeURIComponent(state.resultUrl);
 
     panel.innerHTML = `
@@ -1114,11 +1051,8 @@
       </div>
     `;
 
-    // Attach event listeners
     const closeBtn = shadowQuerySelector('.close-result-btn');
-    if (closeBtn) {
-      closeBtn.onclick = closePanel;
-    }
+    if (closeBtn) { closeBtn.onclick = closePanel; }
 
     const addMoreBtn = shadowQuerySelector('.add-more-btn');
     if (addMoreBtn) {
@@ -1143,19 +1077,16 @@
       };
     }
 
-    // Add zoom functionality to result image
     const resultImage = shadowQuerySelector('.tryon-result-image');
     const imageContainer = shadowQuerySelector('.tryon-result-image-container');
-    
+
     if (resultImage && imageContainer) {
       let isZoomed = false;
 
       resultImage.addEventListener('click', function(e) {
         isZoomed = !isZoomed;
-        
         if (isZoomed) {
           resultImage.classList.add('zoomed');
-          // Calculate initial zoom position based on click
           updateZoomPosition(e);
         } else {
           resultImage.classList.remove('zoomed');
@@ -1164,9 +1095,7 @@
       });
 
       resultImage.addEventListener('mousemove', function(e) {
-        if (isZoomed) {
-          updateZoomPosition(e);
-        }
+        if (isZoomed) { updateZoomPosition(e); }
       });
 
       resultImage.addEventListener('mouseleave', function() {
@@ -1181,11 +1110,8 @@
         const rect = resultImage.getBoundingClientRect();
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
-        
-        // Constrain the zoom to keep it within visible bounds
         const constrainedX = Math.max(25, Math.min(75, x));
         const constrainedY = Math.max(25, Math.min(75, y));
-        
         resultImage.style.transformOrigin = `${constrainedX}% ${constrainedY}%`;
       }
     }
@@ -1218,6 +1144,5 @@
     init();
   }
 
-  // Expose for debugging
   window[WIDGET_ID] = { state, close: closePanel };
 })();

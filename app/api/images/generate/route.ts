@@ -226,6 +226,21 @@ export async function POST(request: NextRequest) {
         ? "FAL_KEY inválida o sin permisos. Verificá tu API key en fal.ai/dashboard/keys"
         : "Error al generar la imagen";
       
+      // Preparar detalles de debug para respuesta si está habilitado DEBUG_FAL
+      const debugDetails = process.env.DEBUG_FAL === '1' ? (() => {
+        try {
+          const e = falError as any;
+          return {
+            message: e?.message,
+            name: e?.name,
+            status: e?.status,
+            body: typeof e?.body === 'object' ? JSON.stringify(e.body) : e?.body,
+          };
+        } catch (err) {
+          return { debugError: String(err) };
+        }
+      })() : undefined;
+
       // Update generation with error + Record error metric en paralelo
       await Promise.all([
         prisma.generation.update({
@@ -251,10 +266,10 @@ export async function POST(request: NextRequest) {
         })
       ]);
 
-      return corsJson(
-        { success: false, error: userError },
-        500
-      );
+      const responsePayload: any = { success: false, error: userError };
+      if (debugDetails) responsePayload.debug = debugDetails;
+
+      return corsJson(responsePayload, 500);
     }
   } catch (error) {
     console.error(`[${requestId}] Unexpected error:`, error);
