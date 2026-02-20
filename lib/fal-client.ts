@@ -10,214 +10,178 @@ export interface FalGenerationResult {
 export interface FalGenerationInput {
   personImageUrl: string
   garmentImageUrl: string
-  prompt?: string
   seed?: number
   enhance_prompt_mode?: 'standard' | 'fast'
-  num_images?: number
-  image_size?: 'square_hd' | 'square' | 'portrait_4_3' | 'portrait_16_9' | 'landscape_4_3' | 'landscape_16_9'
-  // Flux 2 LoRA Gallery Virtual Try-On specific options
-  guidance_scale?: number // Default: 2.5
-  num_inference_steps?: number // Default: 30
-  acceleration?: 'none' | 'regular' // Default: 'regular'
-  enable_safety_checker?: boolean // Default: true
-  output_format?: 'png' | 'jpeg' | 'webp' // Default: 'png'
-  lora_scale?: number // Default: 1
+  // fashn/tryon/v1.6 specific options
+  model_type?: 'leffa' | 'ootd' | 'idm'              // Default: 'ootd'
+  garment_photo_type?: 'auto' | 'flat-lay' | 'model'  // Default: 'auto'
+  nsfw_filter?: boolean                                // Default: true
+  cover_feet?: boolean                                 // Default: false
+  adjust_hands?: boolean                               // Default: false
+  restore_background?: boolean                         // Default: false
+  restore_clothes?: boolean                            // Default: false
+  long_top?: boolean                                   // Default: false
+  timestep_spacing?: 'trailing' | 'linear'
+  guidance_scale?: number                              // Default: 2.5
+  num_inference_steps?: number                         // Default: 50
+  output_format?: 'png' | 'jpeg' | 'webp'
 }
 
 /**
- * Cliente para interactuar con FAL AI usando Flux 2 LoRA Gallery Virtual Try-On
+ * Cliente para interactuar con FAL AI usando fashn/tryon/v1.6
  */
 export class FalClient {
   private apiKey?: string;
-  
+
   constructor(apiKey?: string) {
     this.apiKey = apiKey || process.env.FAL_KEY;
   }
 
   /**
-   * Convierte base64 data URL a Blob
+   * Convierte base64 data URL a Buffer y lo sube a FAL.ai storage.
+   * Si ya es una URL pública, la retorna directamente.
    */
-  private base64ToBlob(base64: string): Blob {
-    const parts = base64.split(';base64,');
-    const contentType = parts[0].split(':')[1] || 'image/jpeg';
-
-    // En Node.js usamos Buffer, en navegadores usamos atob
-    let data: Uint8Array | Buffer;
-    if (typeof Buffer !== 'undefined') {
-      data = Buffer.from(parts[1], 'base64');
-    } else {
-      const raw = atob(parts[1]);
-      const rawLength = raw.length;
-      const uInt8Array = new Uint8Array(rawLength);
-      for (let i = 0; i < rawLength; ++i) {
-        uInt8Array[i] = raw.charCodeAt(i);
-      }
-      data = uInt8Array;
+  private async uploadImage(base64OrUrl: string): Promise<string> {
+    if (!base64OrUrl.startsWith('data:')) {
+      return base64OrUrl;
     }
 
-    // Preferir File cuando esté disponible (navegador). En Node usamos Blob si existe, o pasamos el Buffer.
-    if (typeof File !== 'undefined') {
-      return new File([data as any], 'image.jpg', { type: contentType }) as unknown as Blob;
-    }
-    if (typeof Blob !== 'undefined') {
-      return new Blob([data as any], { type: contentType });
-    }
-
-    // Fallback: envolver Buffer en Blob-like usando Uint8Array
-    const fallback = data instanceof Buffer ? new Uint8Array(data) : data;
-    return new Blob([fallback as any], { type: contentType });
-  }
-
-  /**
-   * Sube una imagen base64 a FAL.ai y obtiene una URL
-   */
-  private async uploadImage(base64: string): Promise<string> {
     try {
-      // Si ya es una URL (no es base64), retornarla directamente
-      if (!base64.startsWith('data:')) {
-        return base64;
+      const matches = base64OrUrl.match(/^data:([^;]+);base64,(.+)$/);
+      if (!matches) throw new Error('Invalid base64 data URL format');
+
+      const mimeType = matches[1];
+      const base64Data = matches[2];
+      const buffer = Buffer.from(base64Data, 'base64');
+      const ext = mimeType.split('/')[1] || 'jpg';
+
+      // Escribir a archivo temporal
+      const tmpPath = path.join(
+        os.tmpdir(),
+        `tryon_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+      );
+      fs.writeFileSync(tmpPath, buffer);
+
+      try {
+        const file = new File([buffer], `image.${ext}`, { type: mimeType });
+        const uploadedUrl = await fal.storage.upload(file);
+        return uploadedUrl;
+      } finally {
+        try { fs.unlinkSync(tmpPath); } catch { /* ignorar */ }
       }
-
-      // En entornos Node intentamos subir como stream desde un archivo temporal
-      if (typeof Buffer !== 'undefined' && fs && fs.createWriteStream) {
-        const parts = base64.split(';base64,');
-        const contentType = parts[0].split(':')[1] || 'image/jpeg';
-        const ext = contentType.split('/')[1] || 'jpg';
-        const tmpName = `tryon-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const tmpPath = path.join(os.tmpdir(), tmpName);
-
-        // Escribir buffer al archivo temporal
-        const buffer = Buffer.from(parts[1], 'base64');
-        await fs.promises.writeFile(tmpPath, buffer);
-
-        try {
-          const stream = fs.createReadStream(tmpPath);
-          const uploadedUrl = await fal.storage.upload(stream as any);
-          return uploadedUrl;
-        } finally {
-          // Intentar limpiar el archivo temporal
-          try {
-            await fs.promises.unlink(tmpPath);
-          } catch (cleanupErr) {
-            console.warn('Could not remove temp file', tmpPath, cleanupErr);
-          }
-        }
-      }
-
-      // Fallback: usar File/Blob o Buffer según la plataforma
-      const blobOrFile = this.base64ToBlob(base64);
-      const uploadedUrl = await fal.storage.upload(blobOrFile as any);
-      return uploadedUrl;
     } catch (error) {
-      console.error('Error uploading image to FAL:', error);
+      console.error('[FalClient] Error uploading image:', error);
       throw new Error('Failed to upload image to FAL.ai storage');
     }
   }
 
   async generate(input: FalGenerationInput): Promise<FalGenerationResult> {
+    const credentials = this.apiKey || process.env.FAL_KEY;
+    if (!credentials) {
+      throw new Error('FAL_KEY is not configured');
+    }
+    fal.config({ credentials });
+
+    console.log('[FalClient] Uploading images to FAL.ai storage...');
+    const [personImageUrl, garmentImageUrl] = await Promise.all([
+      this.uploadImage(input.personImageUrl),
+      this.uploadImage(input.garmentImageUrl),
+    ]);
+    console.log('[FalClient] Images uploaded:', { personImageUrl, garmentImageUrl });
+
+    const model = 'fal-ai/fashn/tryon/v1.6';
+    console.log('[FalClient] Calling model:', model);
+
     try {
-      // Configurar credenciales
-      const credentials = this.apiKey || process.env.FAL_KEY;
-      if (credentials) {
-        fal.config({ credentials });
-      }
-
-      // Subir imágenes base64 a FAL.ai storage en paralelo para ahorrar tiempo
-      console.log('Uploading images to FAL.ai storage...');
-      const [personImageUrl, garmentImageUrl] = await Promise.all([
-        this.uploadImage(input.personImageUrl),
-        this.uploadImage(input.garmentImageUrl)
-      ]);
-      console.log('Images uploaded successfully');
-      console.log('Person image URL:', personImageUrl);
-      console.log('Garment image URL:', garmentImageUrl);
-
-      // Modelo Flux 2 LoRA Gallery Virtual Try-On - Virtual clothing try-on
-      const model = 'fal-ai/flux-2-lora-gallery/virtual-tryon';
-
-      console.log('Calling FAL AI with model:', model);
-      console.log('Image URLs:', { person: personImageUrl, garment: garmentImageUrl });
-
-      // Preparar el prompt por defecto
-      const prompt = input.prompt || 'A person wearing a stylish outfit, virtual try-on';
-
-      // Flux 2 LoRA Gallery Virtual Try-On API expects `image_urls` array and prompt
       const result = await fal.subscribe(model, {
         input: {
-          image_urls: [personImageUrl, garmentImageUrl],
-          prompt: prompt,
+          model_image: personImageUrl,
+          garment_image: garmentImageUrl,
+          model_type: input.model_type ?? 'ootd',
+          garment_photo_type: input.garment_photo_type ?? 'auto',
+          nsfw_filter: input.nsfw_filter ?? true,
+          cover_feet: input.cover_feet ?? false,
+          adjust_hands: input.adjust_hands ?? false,
+          restore_background: input.restore_background ?? false,
+          restore_clothes: input.restore_clothes ?? false,
+          long_top: input.long_top ?? false,
           guidance_scale: input.guidance_scale ?? 2.5,
-          num_inference_steps: input.num_inference_steps ?? 30,
-          acceleration: input.acceleration || 'regular',
-          enable_safety_checker: input.enable_safety_checker ?? true,
-          output_format: input.output_format || 'png',
-          num_images: input.num_images ?? 1,
-          lora_scale: input.lora_scale ?? 1,
+          num_inference_steps: input.num_inference_steps ?? 50,
           ...(input.seed !== undefined ? { seed: input.seed } : {}),
-          ...(input.image_size ? { image_size: input.image_size } : {}),
+          ...(input.output_format ? { output_format: input.output_format } : {}),
+          ...(input.timestep_spacing ? { timestep_spacing: input.timestep_spacing } : {}),
         },
         logs: true,
         onQueueUpdate: (update) => {
           if (update.status === 'IN_PROGRESS') {
-            update.logs?.map((log) => log.message).forEach(console.log);
+            update.logs?.forEach((log) => console.log('[FAL]', log.message));
           }
         },
-      }) as { data?: { images?: Array<{ url: string }> }; images?: Array<{ url: string }>; image?: { url: string } };
+      }) as {
+        data?: { images?: Array<{ url: string }> };
+        images?: Array<{ url: string }>;
+        image?: { url: string };
+        output?: { image?: { url: string } };
+      };
 
-      console.log('FAL AI raw response:', JSON.stringify(result, null, 2).substring(0, 500));
+      console.log('[FalClient] Response preview:', JSON.stringify(result).substring(0, 500));
 
-      // Manejar diferentes estructuras de respuesta
       let imageUrl: string | undefined;
-      
+
       if (result?.data?.images?.[0]?.url) {
         imageUrl = result.data.images[0].url;
       } else if (result?.images?.[0]?.url) {
         imageUrl = result.images[0].url;
       } else if (result?.image?.url) {
         imageUrl = result.image.url;
-      } else if (typeof result === 'object' && result !== null) {
-        // Buscar recursivamente una URL de imagen
-        const findImageUrl = (obj: Record<string, unknown>): string | undefined => {
+      } else if (result?.output?.image?.url) {
+        imageUrl = result.output.image.url;
+      } else {
+        // Búsqueda recursiva como último recurso
+        const findUrl = (obj: Record<string, unknown>): string | undefined => {
           for (const [key, value] of Object.entries(obj)) {
             if (key === 'url' && typeof value === 'string' && value.startsWith('http')) {
               return value;
             }
-            if (typeof value === 'object' && value !== null) {
-              const found = findImageUrl(value as Record<string, unknown>);
+            if (value && typeof value === 'object') {
+              const found = findUrl(value as Record<string, unknown>);
               if (found) return found;
             }
           }
           return undefined;
         };
-        imageUrl = findImageUrl(result as Record<string, unknown>);
+        imageUrl = findUrl(result as Record<string, unknown>);
       }
 
       if (!imageUrl) {
-        console.error('No image URL found in response:', result);
+        console.error('[FalClient] No image URL found in response:', result);
         throw new Error('Invalid response from FAL AI - no image URL found');
       }
 
-      console.log('Generated image URL:', imageUrl);
+      console.log('[FalClient] Generated image URL:', imageUrl);
       return { imageUrl };
-      
+
     } catch (error) {
-      console.error('FAL AI error:', error);
-      // Log más detalles del error
+      console.error('[FalClient] Generation error:', error);
+
       if (error && typeof error === 'object') {
-        const e = error as { status?: number; body?: unknown; message?: string };
+        const e = error as { status?: number; body?: unknown };
         try {
-          console.error('Error details - Status:', e.status, 'Body:', JSON.stringify(e.body, null, 2));
-        } catch (jsonErr) {
-          console.error('Could not stringify error body', jsonErr);
-        }
+          console.error('[FalClient] Error status:', e.status);
+          if (e.body) console.error('[FalClient] Error body:', JSON.stringify(e.body, null, 2));
+        } catch { /* ignorar */ }
       }
-      // Propagar el error original cuando sea posible para que el handler pueda inspeccionarlo
+
       if (error instanceof Error) {
-        // marcar para debugging
         (error as any).__isFalError = true;
         throw error;
       }
-      throw new Error(`FAL AI generation failed: ${error && typeof error === 'object' ? JSON.stringify(error) : 'Unknown error'}`);
+
+      throw new Error(
+        `FAL AI generation failed: ${
+          error && typeof error === 'object' ? JSON.stringify(error) : 'Unknown error'
+        }`
+      );
     }
   }
 }
