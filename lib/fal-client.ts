@@ -10,7 +10,6 @@ export interface FalGenerationResult {
 export interface FalGenerationInput {
   personImageUrl: string
   garmentImageUrl: string
-  // SeedDream v4 edit options
   prompt?: string
   num_images?: number
   seed?: number
@@ -26,10 +25,6 @@ export class FalClient {
     this.apiKey = apiKey || process.env.FAL_KEY;
   }
 
-  /**
-   * Sube una imagen base64 a FAL.ai storage y retorna la URL pública.
-   * Si ya es una URL, la retorna directamente.
-   */
   private async uploadImage(base64OrUrl: string): Promise<string> {
     if (!base64OrUrl.startsWith('data:')) {
       return base64OrUrl;
@@ -70,7 +65,6 @@ export class FalClient {
     }
     fal.config({ credentials });
 
-    // Subir persona y prenda en paralelo
     console.log('[FalClient] Uploading images to FAL.ai storage...');
     const [personImageUrl, garmentImageUrl] = await Promise.all([
       this.uploadImage(input.personImageUrl),
@@ -81,18 +75,24 @@ export class FalClient {
     const model = 'fal-ai/bytedance/seedream/v4/edit';
     console.log('[FalClient] Calling model:', model);
 
-    // Prompt optimizado para virtual try-on con SeedDream v4
-    const prompt = input.prompt || `Virtual try-on task. Image 1 is the person. Image 2 is the garment product shot.
+    const prompt = input.prompt || `Virtual try-on. Image 1 is the person. Image 2 is the garment.
 
-STRICT RULES:
-1. PRESERVE the person exactly: face, hair, skin tone, body shape, pose, shoes, background. Do not change anything except clothing.
-2. REPLICATE the garment from image 2 with 100% fidelity: exact colors, brand logo, text, stitching, zippers, buttons, patterns and textures. Never invent or substitute any detail of the garment.
-3. LAYERING rules based on garment type:
-   - JACKET / COAT / PUFFER / OUTERWEAR: place it ON TOP of whatever the person is already wearing. Do NOT remove the clothing underneath. Show it open/unzipped so the underlayer is visible.
-   - DRESS / JUMPSUIT / FULL-BODY garment: replace the entire outfit of the person.
-   - TOP / SHIRT / BLOUSE / SWEATER: replace only the upper body clothing, keep the lower body as-is.
-   - PANTS / SKIRT / SHORTS: replace only the lower body clothing, keep the upper body as-is.
-4. Result must look like a single real professional fashion photo, not a collage or composite.`;
+CRITICAL — BODY PROPORTIONS:
+- The person's head, face, body proportions and height must remain IDENTICAL to image 1. Do not resize, shrink or alter the person's anatomy in any way.
+- The garment must fit the person's actual body size naturally, as if they are wearing it. Do not make the garment oversized or disproportionate relative to the body.
+- The person's head-to-body ratio must stay exactly the same as in image 1.
+
+GARMENT FIDELITY:
+- Reproduce the garment from image 2 with 100% accuracy: exact brand logo, colors, stitching, zippers, pockets, patterns and textures. Never invent details.
+
+LAYERING rules:
+- JACKET / COAT / PUFFER / OUTERWEAR: place ON TOP of existing clothing. Do NOT remove what is underneath. Show the jacket open/unzipped so the underlayer remains visible.
+- DRESS / JUMPSUIT / FULL-BODY: replace the entire outfit.
+- TOP / SHIRT / BLOUSE: replace upper body only, keep lower body as-is.
+- PANTS / SKIRT / SHORTS: replace lower body only, keep upper body as-is.
+
+PRESERVE exactly: face, hair, skin tone, shoes, background, lighting, pose.
+Final result must look like a single natural professional fashion photo.`;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const falInput: Record<string, any> = {
