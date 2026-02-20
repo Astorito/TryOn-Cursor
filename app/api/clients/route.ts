@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
         ? {
             create: domains.map((d: string) => ({ domain: d.trim() })),
           }
-        : ,
+         : undefined,
     };
 
     const client = await prisma.client.create({
