@@ -88,11 +88,12 @@ MOST IMPORTANT — PROPORTIONS AND ANATOMY:
 GARMENT ACCURACY:
 - Copy the garment from image 2 exactly: brand name, logo, colors, color-blocking, stitching, zippers, pockets. Do not invent or alter any detail.
 
-CLOTHING TYPE RULES:
-- JACKET / COAT / PUFFER: wear it naturally closed over whatever is underneath.
-- DRESS / JUMPSUIT: replace the full outfit.
-- TOP / SHIRT: replace upper body only.
-- PANTS / SKIRT: replace lower body only.
+CLOTHING TYPE RULES — identify the garment type from image 2 and apply:
+- BIKINI / SWIMSUIT / SWIMWEAR / UNDERWEAR / LINGERIE: replace the ENTIRE outfit. Show the person wearing only the swimwear. Do not add extra layers.
+- JACKET / COAT / PUFFER / OUTERWEAR: place ON TOP of existing clothing. Do not remove what is underneath.
+- DRESS / JUMPSUIT / ROMPER: replace the full outfit completely.
+- TOP / SHIRT / BLOUSE / CROP TOP: replace upper body only, keep lower body unchanged.
+- PANTS / JEANS / SKIRT / SHORTS: replace lower body only, keep upper body unchanged.
 
 KEEP UNCHANGED: face, hair, skin tone, shoes, background, lighting.
 Output: a single realistic professional fashion photograph.`;
