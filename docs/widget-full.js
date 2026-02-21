@@ -61,17 +61,21 @@
   ];
 
   // Image compression
-  function compressImage(base64, maxHeight, quality) {
+  function compressImage(base64, maxDimension, quality) {
     return new Promise(function(resolve) {
       var img = new Image();
       img.onload = function() {
         var canvas = document.createElement('canvas');
         var ctx = canvas.getContext('2d');
-        var ratio = maxHeight / img.height;
-        if (img.height <= maxHeight) { ratio = 1; }
-        canvas.width = img.width * ratio;
-        canvas.height = img.height * ratio;
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        var w = img.width, h = img.height;
+        // Scale down preserving aspect ratio — only if needed
+        if (w > maxDimension || h > maxDimension) {
+          if (w > h) { h = Math.round(h * maxDimension / w); w = maxDimension; }
+          else { w = Math.round(w * maxDimension / h); h = maxDimension; }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        ctx.drawImage(img, 0, 0, w, h);
         resolve(canvas.toDataURL('image/jpeg', quality));
       };
       img.src = base64;
@@ -724,7 +728,10 @@
     const reader = new FileReader();
     reader.onload = function(e) {
       const base64 = e.target.result;
-      compressImage(base64, 768, 0.75).then(function(compressedBase64) {
+      // Kontext/multi needs high-res for brand + texture detection
+      var maxDim = (type === 'user') ? 1200 : 1024;
+      var qual   = (type === 'user') ? 0.92  : 0.90;
+      compressImage(base64, maxDim, qual).then(function(compressedBase64) {
         if (type === 'user') {
           state.userImage = compressedBase64;
           state.userImageFile = file;
