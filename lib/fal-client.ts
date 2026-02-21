@@ -84,17 +84,17 @@ export class FalClient {
 
     console.log('[FalClient] Images uploaded OK:', { personImageUrl, garmentImageUrl });
 
-    const model = 'fal-ai/flux-pro/kontext/multi';
+    const model = 'fal-ai/flux-pro/kontext/max/multi';
     console.log('[FalClient] Calling model:', model);
 
-    // Short, direct prompt — Kontext works best with concise instructions
-    const prompt = input.prompt || `Dress the person in image 1 with the exact garment shown in image 2. Keep their face, hair, pose, background and shoes identical. Reproduce the garment with 100% accuracy including brand logo, colors and all details.`;
+    // Kontext/multi: image_urls[0] = person to edit, image_urls[1] = garment reference
+    const prompt = input.prompt || `The first image shows a person. The second image shows a garment. Edit the first image so the person is wearing the garment from the second image. Keep the person's face, body, pose, background and shoes exactly the same. Only change the clothing.`;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const falInput: Record<string, any> = {
       prompt,
       image_urls: [personImageUrl, garmentImageUrl],
-      guidance_scale: input.guidance_scale ?? 3.5,
+      guidance_scale: input.guidance_scale ?? 2.5,
       num_images: input.num_images ?? 1,
       output_format: input.output_format ?? 'jpeg',
       enhance_prompt: true,
