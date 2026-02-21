@@ -51,7 +51,7 @@ export class FalClient {
         const uploadedUrl = await fal.storage.upload(file);
         return uploadedUrl;
       } finally {
-        try { fs.unlinkSync(tmpPath); } catch { /* ignorar */ }
+        try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
       }
     } catch (error) {
       console.error('[FalClient] Error uploading image:', error);
@@ -66,7 +66,7 @@ export class FalClient {
     }
     fal.config({ credentials });
 
-    // Validate inputs before uploading
+    // Validate inputs
     if (!input.personImageUrl) throw new Error('personImageUrl is required');
     if (!input.garmentImageUrl) throw new Error('garmentImageUrl is required');
 
@@ -79,118 +79,26 @@ export class FalClient {
       this.uploadImage(input.garmentImageUrl),
     ]);
 
-    // Validate uploaded URLs
-    if (!personImageUrl || !personImageUrl.startsWith('http')) throw new Error('Failed to upload person image - invalid URL returned');
-    if (!garmentImageUrl || !garmentImageUrl.startsWith('http')) throw new Error('Failed to upload garment image - invalid URL returned');
+    if (!personImageUrl || !personImageUrl.startsWith('http')) throw new Error('Failed to upload person image');
+    if (!garmentImageUrl || !garmentImageUrl.startsWith('http')) throw new Error('Failed to upload garment image');
 
     console.log('[FalClient] Images uploaded OK:', { personImageUrl, garmentImageUrl });
 
     const model = 'fal-ai/flux-pro/kontext/multi';
     console.log('[FalClient] Calling model:', model);
 
-    
-export interface FalGenerationResult {
-  imageUrl: string
-}
-
-export interface FalGenerationInput {
-  personImageUrl: string
-  garmentImageUrl: string
-  prompt?: string
-  num_images?: number
-  seed?: number
-  guidance_scale?: number
-  output_format?: 'jpeg' | 'png'
-  safety_tolerance?: '1' | '2' | '3' | '4' | '5' | '6'
-  aspect_ratio?: '21:9' | '16:9' | '4:3' | '3:2' | '1:1' | '2:3' | '3:4' | '9:16' | '9:21'
-}
-
-export class FalClient {
-  private apiKey?: string;
-
-  constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.FAL_KEY;
-  }
-
-  private async uploadImage(base64OrUrl: string): Promise<string> {
-    if (!base64OrUrl.startsWith('data:')) {
-      return base64OrUrl;
-    }
-
-    try {
-      const matches = base64OrUrl.match(/^data:([^;]+);base64,(.+)$/);
-      if (!matches) throw new Error('Invalid base64 data URL format');
-
-      const mimeType = matches[1];
-      const base64Data = matches[2];
-      const buffer = Buffer.from(base64Data, 'base64');
-      const ext = mimeType.split('/')[1] || 'jpg';
-
-      const tmpPath = path.join(
-        os.tmpdir(),
-        `tryon_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
-      );
-      fs.writeFileSync(tmpPath, buffer);
-
-      try {
-        const file = new File([buffer], `image.${ext}`, { type: mimeType });
-        const uploadedUrl = await fal.storage.upload(file);
-        return uploadedUrl;
-      } finally {
-        try { fs.unlinkSync(tmpPath); } catch { /* ignorar */ }
-      }
-    } catch (error) {
-      console.error('[FalClient] Error uploading image:', error);
-      throw new Error('Failed to upload image to FAL.ai storage');
-    }
-  }
-
-  async generate(input: FalGenerationInput): Promise<FalGenerationResult> {
-    const credentials = this.apiKey || process.env.FAL_KEY;
-    if (!credentials) {
-      throw new Error('FAL_KEY is not configured');
-    }
-    fal.config({ credentials });
-
-    // Validate inputs before uploading
-    if (!input.personImageUrl) throw new Error('personImageUrl is required');
-    if (!input.garmentImageUrl) throw new Error('garmentImageUrl is required');
-
-    console.log('[FalClient] Uploading images to FAL.ai storage...');
-    console.log('[FalClient] personImageUrl type:', input.personImageUrl.startsWith('data:') ? 'base64' : 'url', '- length:', input.personImageUrl.length);
-    console.log('[FalClient] garmentImageUrl type:', input.garmentImageUrl.startsWith('data:') ? 'base64' : 'url', '- length:', input.garmentImageUrl.length);
-
-    const [personImageUrl, garmentImageUrl] = await Promise.all([
-      this.uploadImage(input.personImageUrl),
-      this.uploadImage(input.garmentImageUrl),
-    ]);
-
-    // Validate uploaded URLs
-    if (!personImageUrl || !personImageUrl.startsWith('http')) throw new Error('Failed to upload person image - invalid URL returned');
-    if (!garmentImageUrl || !garmentImageUrl.startsWith('http')) throw new Error('Failed to upload garment image - invalid URL returned');
-
-    console.log('[FalClient] Images uploaded OK:', { personImageUrl, garmentImageUrl });
-
-    const model = 'fal-ai/flux-pro/kontext/multi';
-    console.log('[FalClient] Calling model:', model);
-
-    const prompt = input.prompt || `Dress the person in image 1 with the exact garment shown in image 2. Keep their face, hair, pose, background and shoes identical. Reproduce the garment with 100% accuracy including brand logo, colors and all details.`
+    // Short, direct prompt — Kontext works best with concise instructions
+    const prompt = input.prompt || `Dress the person in image 1 with the exact garment shown in image 2. Keep their face, hair, pose, background and shoes identical. Reproduce the garment with 100% accuracy including brand logo, colors and all details.`;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const falInput: Record<string, any> = {
       prompt,
       image_urls: [personImageUrl, garmentImageUrl],
-      // VELOCIDAD: guidance_scale bajo = menos iteraciones = más rápido
-      // 2.5 es el mínimo útil para mantener coherencia sin sacrificar velocidad
-      guidance_scale: input.guidance_scale ?? 3.5, // 3.5 = default Kontext — 2.5 era muy bajo y el modelo no modificaba la imagen
+      guidance_scale: input.guidance_scale ?? 3.5,
       num_images: input.num_images ?? 1,
-      // VELOCIDAD: jpeg es más rápido de codificar que png
       output_format: input.output_format ?? 'jpeg',
-      // enhance_prompt: FLUX mejora el prompt internamente para mejor adherencia
       enhance_prompt: true,
-      // safety_tolerance 2 = default seguro, sin overhead extra
       safety_tolerance: input.safety_tolerance ?? '2',
-      // 3:4 = portrait ideal para fotos de moda full body
       aspect_ratio: input.aspect_ratio ?? '3:4',
       ...(input.seed !== undefined ? { seed: input.seed } : {}),
     };
@@ -253,7 +161,7 @@ export class FalClient {
         try {
           console.error('[FalClient] Error status:', e.status);
           if (e.body) console.error('[FalClient] Error body:', JSON.stringify(e.body, null, 2));
-        } catch { /* ignorar */ }
+        } catch { /* ignore */ }
       }
 
       if (error instanceof Error) {
