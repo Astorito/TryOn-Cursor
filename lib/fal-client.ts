@@ -13,9 +13,10 @@ export interface FalGenerationInput {
   prompt?: string
   num_images?: number
   seed?: number
-  enhance_prompt_mode?: 'standard' | 'fast'
-  enable_safety_checker?: boolean
-  image_size?: 'square_hd' | 'square' | 'portrait_4_3' | 'portrait_16_9' | 'landscape_4_3' | 'landscape_16_9' | 'auto' | 'auto_2K' | 'auto_4K'
+  guidance_scale?: number
+  output_format?: 'jpeg' | 'png'
+  safety_tolerance?: '1' | '2' | '3' | '4' | '5' | '6'
+  aspect_ratio?: '21:9' | '16:9' | '4:3' | '3:2' | '1:1' | '2:3' | '3:4' | '9:16' | '9:21'
 }
 
 export class FalClient {
@@ -72,37 +73,47 @@ export class FalClient {
     ]);
     console.log('[FalClient] Images uploaded:', { personImageUrl, garmentImageUrl });
 
-    const model = 'fal-ai/bytedance/seedream/v4/edit';
+    const model = 'fal-ai/flux-pro/kontext/multi';
     console.log('[FalClient] Calling model:', model);
 
-    const prompt = input.prompt || `Virtual try-on. Image 1 is the person. Image 2 is the garment.
+    const prompt = input.prompt || `Professional fashion photo virtual try-on. Image 1 is the person. Image 2 is the garment.
 
-CRITICAL — BODY PROPORTIONS:
-- The person's head, face, body proportions and height must remain IDENTICAL to image 1. Do not resize, shrink or alter the person's anatomy in any way.
-- The garment must fit the person's actual body size naturally, as if they are wearing it. Do not make the garment oversized or disproportionate relative to the body.
-- The person's head-to-body ratio must stay exactly the same as in image 1.
+Task: dress the person from image 1 wearing the exact garment from image 2.
 
-GARMENT FIDELITY:
-- Reproduce the garment from image 2 with 100% accuracy: exact brand logo, colors, stitching, zippers, pockets, patterns and textures. Never invent details.
+MOST IMPORTANT — PROPORTIONS AND ANATOMY:
+- The person's body must look exactly the same as in image 1: same height, same head size, same face, same arms, same legs, same pose.
+- The garment must fit the person's body naturally and proportionally, like a real piece of clothing being worn — not floating, not oversized, not a costume.
+- The person's arms must go through the sleeves naturally. The garment sits on the shoulders correctly.
 
-LAYERING rules:
-- JACKET / COAT / PUFFER / OUTERWEAR: place ON TOP of existing clothing. Do NOT remove what is underneath. Show the jacket open/unzipped so the underlayer remains visible.
-- DRESS / JUMPSUIT / FULL-BODY: replace the entire outfit.
-- TOP / SHIRT / BLOUSE: replace upper body only, keep lower body as-is.
-- PANTS / SKIRT / SHORTS: replace lower body only, keep upper body as-is.
+GARMENT ACCURACY:
+- Copy the garment from image 2 exactly: brand name, logo, colors, color-blocking, stitching, zippers, pockets. Do not invent or alter any detail.
 
-PRESERVE exactly: face, hair, skin tone, shoes, background, lighting, pose.
-Final result must look like a single natural professional fashion photo.`;
+CLOTHING TYPE RULES:
+- JACKET / COAT / PUFFER: wear it naturally closed over whatever is underneath.
+- DRESS / JUMPSUIT: replace the full outfit.
+- TOP / SHIRT: replace upper body only.
+- PANTS / SKIRT: replace lower body only.
+
+KEEP UNCHANGED: face, hair, skin tone, shoes, background, lighting.
+Output: a single realistic professional fashion photograph.`;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const falInput: Record<string, any> = {
       prompt,
       image_urls: [personImageUrl, garmentImageUrl],
+      // VELOCIDAD: guidance_scale bajo = menos iteraciones = más rápido
+      // 2.5 es el mínimo útil para mantener coherencia sin sacrificar velocidad
+      guidance_scale: input.guidance_scale ?? 2.5,
       num_images: input.num_images ?? 1,
-      enhance_prompt_mode: input.enhance_prompt_mode ?? 'standard',
-      enable_safety_checker: input.enable_safety_checker ?? true,
+      // VELOCIDAD: jpeg es más rápido de codificar que png
+      output_format: input.output_format ?? 'jpeg',
+      // enhance_prompt: FLUX mejora el prompt internamente para mejor adherencia
+      enhance_prompt: true,
+      // safety_tolerance 2 = default seguro, sin overhead extra
+      safety_tolerance: input.safety_tolerance ?? '2',
+      // 3:4 = portrait ideal para fotos de moda full body
+      aspect_ratio: input.aspect_ratio ?? '3:4',
       ...(input.seed !== undefined ? { seed: input.seed } : {}),
-      ...(input.image_size ? { image_size: input.image_size } : {}),
     };
 
     try {
