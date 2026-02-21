@@ -116,7 +116,7 @@ Output: a single realistic professional fashion photograph.`;
       image_urls: [personImageUrl, garmentImageUrl],
       // VELOCIDAD: guidance_scale bajo = menos iteraciones = más rápido
       // 2.5 es el mínimo útil para mantener coherencia sin sacrificar velocidad
-      guidance_scale: input.guidance_scale ?? 2.5,
+      guidance_scale: input.guidance_scale ?? 2.9,
       num_images: input.num_images ?? 1,
       // VELOCIDAD: jpeg es más rápido de codificar que png
       output_format: input.output_format ?? 'jpeg',
