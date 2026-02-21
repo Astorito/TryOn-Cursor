@@ -46,8 +46,7 @@ export async function POST(request: NextRequest) {
       garmentImageUrl,
     } = body;
 
-    // Forzar uso del modelo Fashn try-on v1.6 en todas las generaciones
-    const modelUsed = 'fal-ai/fashn/tryon/v1.6';
+    const modelUsed = 'fal-ai/flux-pro/kontext/multi';
 
     // #region agent log
     _log('POST body parsed', { hasApiKey: !!apiKey, userImageLen: typeof userImage === 'string' ? userImage.length : 0, garmentsCount: Array.isArray(garments) ? garments.length : 0, hasFalKey: !!process.env.FAL_KEY });
@@ -79,8 +78,8 @@ export async function POST(request: NextRequest) {
     // ── Authenticate, Rate limit y Check usage en paralelo (queries independientes) ──
     const [authResult, rateLimitResult, generationCount] = await Promise.all([
       validateApiKey(apiKey),
-      checkRateLimit(`client_temp`, 10, 60_000), // Temporarily use 'client_temp', will update after auth
-      Promise.resolve(0) // Placeholder - will query after we have clientId
+      checkRateLimit(`client_temp`, 10, 60_000),
+      Promise.resolve(0)
     ]);
 
     if (!authResult.valid || !authResult.client) {
@@ -135,8 +134,8 @@ export async function POST(request: NextRequest) {
         clientId: client.id,
         status: "PROCESSING",
         model: modelUsed,
-        personImageUrl: (personImageUrl || userImage || '').substring(0, 200), // Store truncated ref
-        garmentUrls: (garments && garments.length ? garments.map((g: string) => g.substring(0, 200)) : [(garmentImageUrl || '') .substring(0,200)]),
+        personImageUrl: (personImageUrl || userImage || '').substring(0, 200),
+        garmentUrls: (garments && garments.length ? garments.map((g: string) => g.substring(0, 200)) : [(garmentImageUrl || '').substring(0, 200)]),
         startedAt: new Date(),
       },
     });
@@ -145,11 +144,10 @@ export async function POST(request: NextRequest) {
       // #region agent log
       _log('before falClient.generate', { generationId: generation.id });
       // #endregion
-      // ── Prepare images (prefer explicit fields personImageUrl & garmentImageUrl) ──
+
       const personImg = personImageUrl || userImage;
       const garmentImg = garmentImageUrl || (garments && garments[0]);
 
-      // ── Call FAL AI SeedDream v4 Edit ──
       console.log(`[${requestId}] Preparing FAL payload. personImg isData:${typeof personImg === 'string' ? personImg.startsWith('data:') : false} personLen:${typeof personImg === 'string' ? personImg.length : 0} garmentLen:${typeof garmentImg === 'string' ? garmentImg.length : 0}`);
       const falStartTime = Date.now();
       let falResult;
@@ -158,11 +156,9 @@ export async function POST(request: NextRequest) {
           personImageUrl: personImg,
           garmentImageUrl: garmentImg,
           seed: Math.floor(Math.random() * 1000000),
-          enhance_prompt_mode: 'fast',
         });
       } catch (err) {
         console.error(`[${requestId}] falClient.generate threw error:`, err);
-        // Si el error incluye status/body (viene del SDK), imprimirlos
         const e = err as any;
         try {
           console.error(`[${requestId}] fal error status:`, e?.status);
@@ -226,7 +222,6 @@ export async function POST(request: NextRequest) {
         ? "FAL_KEY inválida o sin permisos. Verificá tu API key en fal.ai/dashboard/keys"
         : "Error al generar la imagen";
       
-      // Preparar detalles de debug para respuesta si está habilitado DEBUG_FAL
       const debugDetails = process.env.DEBUG_FAL === '1' ? (() => {
         try {
           const e = falError as any;
@@ -241,14 +236,12 @@ export async function POST(request: NextRequest) {
         }
       })() : undefined;
 
-      // Update generation with error + Record error metric en paralelo
       await Promise.all([
         prisma.generation.update({
           where: { id: generation.id },
           data: {
             status: "ERROR",
-            error:
-              falError instanceof Error ? falError.message : "FAL AI error",
+            error: falError instanceof Error ? falError.message : "FAL AI error",
             durationMs: Date.now() - startTime,
             completedAt: new Date(),
           },
@@ -260,8 +253,7 @@ export async function POST(request: NextRequest) {
             model: modelUsed,
             durationMs: Date.now() - startTime,
             status: "error",
-            error:
-              falError instanceof Error ? falError.message : "FAL AI error",
+            error: falError instanceof Error ? falError.message : "FAL AI error",
           },
         })
       ]);
