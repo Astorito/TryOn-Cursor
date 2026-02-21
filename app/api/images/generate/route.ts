@@ -148,7 +148,17 @@ export async function POST(request: NextRequest) {
       const personImg = personImageUrl || userImage;
       const garmentImg = garmentImageUrl || (garments && garments[0]);
 
-      console.log(`[${requestId}] Preparing FAL payload. personImg isData:${typeof personImg === 'string' ? personImg.startsWith('data:') : false} personLen:${typeof personImg === 'string' ? personImg.length : 0} garmentLen:${typeof garmentImg === 'string' ? garmentImg.length : 0}`);
+      // Explicit validation with clear error messages
+      if (!personImg) {
+        throw new Error('No person image provided (personImageUrl or userImage required)');
+      }
+      if (!garmentImg) {
+        throw new Error('No garment image provided (garmentImageUrl or garments[0] required)');
+      }
+
+      console.log(`[${requestId}] Preparing FAL payload:`);
+      console.log(`[${requestId}]   personImg: ${typeof personImg === 'string' ? (personImg.startsWith('data:') ? 'base64' : 'url') : typeof personImg} - len:${typeof personImg === 'string' ? personImg.length : 0}`);
+      console.log(`[${requestId}]   garmentImg: ${typeof garmentImg === 'string' ? (garmentImg.startsWith('data:') ? 'base64' : 'url') : typeof garmentImg} - len:${typeof garmentImg === 'string' ? garmentImg.length : 0}`);
       const falStartTime = Date.now();
       let falResult;
       try {

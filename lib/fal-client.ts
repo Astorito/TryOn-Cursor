@@ -66,12 +66,24 @@ export class FalClient {
     }
     fal.config({ credentials });
 
+    // Validate inputs before uploading
+    if (!input.personImageUrl) throw new Error('personImageUrl is required');
+    if (!input.garmentImageUrl) throw new Error('garmentImageUrl is required');
+
     console.log('[FalClient] Uploading images to FAL.ai storage...');
+    console.log('[FalClient] personImageUrl type:', input.personImageUrl.startsWith('data:') ? 'base64' : 'url', '- length:', input.personImageUrl.length);
+    console.log('[FalClient] garmentImageUrl type:', input.garmentImageUrl.startsWith('data:') ? 'base64' : 'url', '- length:', input.garmentImageUrl.length);
+
     const [personImageUrl, garmentImageUrl] = await Promise.all([
       this.uploadImage(input.personImageUrl),
       this.uploadImage(input.garmentImageUrl),
     ]);
-    console.log('[FalClient] Images uploaded:', { personImageUrl, garmentImageUrl });
+
+    // Validate uploaded URLs
+    if (!personImageUrl || !personImageUrl.startsWith('http')) throw new Error('Failed to upload person image - invalid URL returned');
+    if (!garmentImageUrl || !garmentImageUrl.startsWith('http')) throw new Error('Failed to upload garment image - invalid URL returned');
+
+    console.log('[FalClient] Images uploaded OK:', { personImageUrl, garmentImageUrl });
 
     const model = 'fal-ai/flux-pro/kontext/multi';
     console.log('[FalClient] Calling model:', model);
