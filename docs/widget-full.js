@@ -681,23 +681,18 @@
   }
 
   function setupGlobalDragDrop() {
-    if (document._tryonDragSetup) return;
-    document._tryonDragSetup = true;
+    if (container._tryonDragSetup) return;
+    container._tryonDragSetup = true;
 
-    // Solo interceptar drops que caigan DENTRO del panel del widget
-    document.addEventListener('dragover', function(e) {
+    // Listeners en el container (shadow host) — no bloquea el resto de la página
+    container.addEventListener('dragover', function(e) {
       if (!state.isOpen) return;
-      // Solo prevenir default si el target está dentro del widget
-      if (panel && panel.contains(e.target)) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'copy';
-      }
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
     }, false);
 
-    document.addEventListener('drop', function(e) {
+    container.addEventListener('drop', function(e) {
       if (!state.isOpen || !e.dataTransfer.files.length) return;
-      // Solo interceptar drops dentro del panel
-      if (!panel || !panel.contains(e.target)) return;
       e.preventDefault(); e.stopPropagation();
       var file = e.dataTransfer.files[0];
       var targetIndex = state.garments.findIndex(g => g === null);
