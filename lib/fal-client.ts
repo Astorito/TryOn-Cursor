@@ -84,20 +84,20 @@ export class FalClient {
 
     console.log('[FalClient] Images uploaded OK:', { personImageUrl, garmentImageUrl });
 
-    const model = 'fal-ai/flux-pro/kontext/max/multi';
+    const model = 'fal-ai/flux-pro/kontext/multi';
     console.log('[FalClient] Calling model:', model);
 
     // Kontext/multi: image_urls[0] = person to edit, image_urls[1] = garment reference
-    const prompt = input.prompt || `Use the first image as the base. The person in the first image should now be wearing the jacket/coat shown in the second image over their current outfit. Do not merge or combine the two images side by side. Output only the person from the first image wearing the garment. Keep face, hair, pose, background, and boots identical.`;
+    const prompt = input.prompt || `Virtual try-on. Image 1 is the person. Image 2 is the garment. Show the person from image 1 wearing the garment from image 2. Reproduce the garment exactly: same type, color, brand, shape, and texture — do not substitute it for a different garment. Keep the person's face, hair, body, pose, background, and shoes unchanged from image 1. Single output photo.`;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const falInput: Record<string, any> = {
       prompt,
       image_urls: [personImageUrl, garmentImageUrl],
-      guidance_scale: input.guidance_scale ?? 4.0,
+      guidance_scale: input.guidance_scale ?? 3.5,
       num_images: input.num_images ?? 1,
       output_format: input.output_format ?? 'jpeg',
-      enhance_prompt: true,
+      enhance_prompt: false, // disabled - was rewriting prompt and losing garment specificity
       safety_tolerance: input.safety_tolerance ?? '2',
       aspect_ratio: input.aspect_ratio ?? '3:4',
       ...(input.seed !== undefined ? { seed: input.seed } : {}),
