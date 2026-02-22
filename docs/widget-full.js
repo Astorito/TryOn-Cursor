@@ -115,7 +115,7 @@
     wrapper.appendChild(fab);
 
     overlay = document.createElement('div');
-    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: transparent; display: none; pointer-events: auto;';
+    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: transparent; display: none; pointer-events: none;';
     wrapper.appendChild(overlay);
 
     panel = document.createElement('div');
