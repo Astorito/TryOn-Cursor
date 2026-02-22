@@ -84,7 +84,7 @@ export class FalClient {
 
     console.log('[FalClient] Images uploaded OK:', { personImageUrl, garmentImageUrl });
 
-    const model = 'fal-ai/flux-pro/kontext/multi';
+    const model = 'fal-ai/flux-pro/kontext/max/multi';
     console.log('[FalClient] Calling model:', model);
 
     // Kontext/multi: image_urls[0] = person to edit, image_urls[1] = garment reference

@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       garmentImageUrl,
     } = body;
 
-    const modelUsed = 'fal-ai/flux-pro/kontext/multi';
+    const modelUsed = 'fal-ai/flux-pro/kontext/max/multi';
 
     // #region agent log
     _log('POST body parsed', { hasApiKey: !!apiKey, userImageLen: typeof userImage === 'string' ? userImage.length : 0, garmentsCount: Array.isArray(garments) ? garments.length : 0, hasFalKey: !!process.env.FAL_KEY });
