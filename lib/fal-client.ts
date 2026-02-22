@@ -1,179 +1,299 @@
-import { fal } from '@fal-ai/client'
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { validateApiKey } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { FalClient } from "@/lib/fal-client";
+import { corsJson } from "@/lib/cors";
 
-export interface FalGenerationResult {
-  imageUrl: string
-}
+// FAL Client ya tiene la config top-level, no necesita apiKey en constructor
+const falClient = new FalClient();
 
-export interface FalGenerationInput {
-  personImageUrl: string
-  garmentImageUrl: string
-  prompt?: string
-  num_images?: number
-  seed?: number
-  guidance_scale?: number
-  output_format?: 'jpeg' | 'png'
-  safety_tolerance?: '1' | '2' | '3' | '4' | '5' | '6'
-  aspect_ratio?: '21:9' | '16:9' | '4:3' | '3:2' | '1:1' | '2:3' | '3:4' | '9:16' | '9:21'
-}
+export const runtime = "nodejs";
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
 
-export class FalClient {
-  private apiKey?: string;
+/**
+ * POST /api/images/generate
+ *
+ * Genera una imagen de virtual try-on usando FAL AI.
+ *
+ * Body:
+ * - apiKey: string (API key del cliente)
+ * - userImage: string (base64 data URL de la imagen del usuario)
+ * - garments: string[] (array de base64 data URLs de prendas)
+ * - model?: string (opcional, modelo a usar)
+ */
+export async function POST(request: NextRequest) {
+  const requestId = Math.random().toString(36).substring(2, 15);
+  const startTime = Date.now();
 
-  constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.FAL_KEY;
-  }
+  // #region agent log
+  const _log = (message: string, data: Record<string, unknown>) => {
+    fetch('http://127.0.0.1:7242/ingest/6409409d-10bf-4ec6-ac7c-944201295ebb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'api/images/generate/route.ts', message, data: { requestId, ...data }, timestamp: Date.now(), hypothesisId: 'H1,H2,H3,H4,H5' }) }).catch(() => {});
+  };
+  // #endregion
 
-  private async uploadImage(base64OrUrl: string): Promise<string> {
-    if (!base64OrUrl.startsWith('data:')) {
-      return base64OrUrl;
+  try {
+    console.log(`[${requestId}] Processing generation request`);
+
+    // Parse request body
+    const body = await request.json();
+    const {
+      apiKey,
+      userImage,
+      garments,
+      personImageUrl,
+      garmentImageUrl,
+    } = body;
+
+    const modelUsed = 'fal-ai/flux-pro/kontext/max/multi';
+
+    // #region agent log
+    _log('POST body parsed', { hasApiKey: !!apiKey, userImageLen: typeof userImage === 'string' ? userImage.length : 0, garmentsCount: Array.isArray(garments) ? garments.length : 0, hasFalKey: !!process.env.FAL_KEY });
+    // #endregion
+
+    // ── Validate input ──
+    if (!apiKey || typeof apiKey !== "string") {
+      return corsJson({ success: false, error: "API key requerida" }, 400);
     }
-
-    try {
-      const matches = base64OrUrl.match(/^data:([^;]+);base64,(.+)$/);
-      if (!matches) throw new Error('Invalid base64 data URL format');
-
-      const mimeType = matches[1];
-      const base64Data = matches[2];
-      const buffer = Buffer.from(base64Data, 'base64');
-      const ext = mimeType.split('/')[1] || 'jpg';
-
-      const tmpPath = path.join(
-        os.tmpdir(),
-        `tryon_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+    if (!userImage || typeof userImage !== "string") {
+      return corsJson(
+        { success: false, error: "Imagen de usuario requerida" },
+        400
       );
-      fs.writeFileSync(tmpPath, buffer);
-
-      try {
-        const file = new File([buffer], `image.${ext}`, { type: mimeType });
-        const uploadedUrl = await fal.storage.upload(file);
-        return uploadedUrl;
-      } finally {
-        try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
-      }
-    } catch (error) {
-      console.error('[FalClient] Error uploading image:', error);
-      throw new Error('Failed to upload image to FAL.ai storage');
     }
-  }
-
-  async generate(input: FalGenerationInput): Promise<FalGenerationResult> {
-    const credentials = this.apiKey || process.env.FAL_KEY;
-    if (!credentials) {
-      throw new Error('FAL_KEY is not configured');
+    if (!garments || !Array.isArray(garments) || garments.length === 0) {
+      return corsJson(
+        { success: false, error: "Al menos una prenda requerida" },
+        400
+      );
     }
-    fal.config({ credentials });
+    if (garments.length > 3) {
+      return corsJson(
+        { success: false, error: "Máximo 3 prendas permitidas" },
+        400
+      );
+    }
 
-    // Validate inputs
-    if (!input.personImageUrl) throw new Error('personImageUrl is required');
-    if (!input.garmentImageUrl) throw new Error('garmentImageUrl is required');
-
-    console.log('[FalClient] Uploading images to FAL.ai storage...');
-    console.log('[FalClient] personImageUrl type:', input.personImageUrl.startsWith('data:') ? 'base64' : 'url', '- length:', input.personImageUrl.length);
-    console.log('[FalClient] garmentImageUrl type:', input.garmentImageUrl.startsWith('data:') ? 'base64' : 'url', '- length:', input.garmentImageUrl.length);
-
-    const [personImageUrl, garmentImageUrl] = await Promise.all([
-      this.uploadImage(input.personImageUrl),
-      this.uploadImage(input.garmentImageUrl),
+    // ── Authenticate, Rate limit y Check usage en paralelo (queries independientes) ──
+    const [authResult, rateLimitResult, generationCount] = await Promise.all([
+      validateApiKey(apiKey),
+      checkRateLimit(`client_temp`, 10, 60_000),
+      Promise.resolve(0)
     ]);
 
-    if (!personImageUrl || !personImageUrl.startsWith('http')) throw new Error('Failed to upload person image');
-    if (!garmentImageUrl || !garmentImageUrl.startsWith('http')) throw new Error('Failed to upload garment image');
-
-    console.log('[FalClient] Images uploaded OK:', { personImageUrl, garmentImageUrl });
-
-    const model = 'fal-ai/flux-pro/kontext/max/multi';
-    console.log('[FalClient] Calling model:', model);
-
-    // Kontext/multi: image_urls[0] = person to edit, image_urls[1] = garment reference
-    const prompt = input.prompt || `Virtual try-on. Image 1 is the person. Image 2 is the garment. Show the person from image 1 wearing the garment from image 2. Reproduce the garment exactly: same type, color, brand, shape, and texture — do not substitute it for a different garment. Keep the person's face, hair, body, pose, background, and shoes unchanged from image 1. Single output photo.`;
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const falInput: Record<string, any> = {
-      prompt,
-      image_urls: [personImageUrl, garmentImageUrl],
-      guidance_scale: input.guidance_scale ?? 3.5,
-      num_images: input.num_images ?? 1,
-      output_format: input.output_format ?? 'jpeg',
-      enhance_prompt: false, // disabled - was rewriting prompt and losing garment specificity
-      safety_tolerance: input.safety_tolerance ?? '2',
-      aspect_ratio: input.aspect_ratio ?? '3:4',
-      ...(input.seed !== undefined ? { seed: input.seed } : {}),
-    };
-
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await fal.subscribe(model, {
-        input: falInput as any,
-        logs: true,
-        onQueueUpdate: (update) => {
-          if (update.status === 'IN_PROGRESS') {
-            update.logs?.forEach((log) => console.log('[FAL]', log.message));
-          }
-        },
-      }) as {
-        data?: { images?: Array<{ url: string }> };
-        images?: Array<{ url: string }>;
-        image?: { url: string };
-      };
-
-      console.log('[FalClient] Response preview:', JSON.stringify(result).substring(0, 500));
-
-      let imageUrl: string | undefined;
-
-      if (result?.data?.images?.[0]?.url) {
-        imageUrl = result.data.images[0].url;
-      } else if (result?.images?.[0]?.url) {
-        imageUrl = result.images[0].url;
-      } else if (result?.image?.url) {
-        imageUrl = result.image.url;
-      } else {
-        const findUrl = (obj: Record<string, unknown>): string | undefined => {
-          for (const [key, value] of Object.entries(obj)) {
-            if (key === 'url' && typeof value === 'string' && value.startsWith('http')) {
-              return value;
-            }
-            if (value && typeof value === 'object') {
-              const found = findUrl(value as Record<string, unknown>);
-              if (found) return found;
-            }
-          }
-          return undefined;
-        };
-        imageUrl = findUrl(result as Record<string, unknown>);
-      }
-
-      if (!imageUrl) {
-        console.error('[FalClient] No image URL found in response:', result);
-        throw new Error('Invalid response from FAL AI - no image URL found');
-      }
-
-      console.log('[FalClient] Generated image URL:', imageUrl);
-      return { imageUrl };
-
-    } catch (error) {
-      console.error('[FalClient] Generation error:', error);
-
-      if (error && typeof error === 'object') {
-        const e = error as { status?: number; body?: unknown };
-        try {
-          console.error('[FalClient] Error status:', e.status);
-          if (e.body) console.error('[FalClient] Error body:', JSON.stringify(e.body, null, 2));
-        } catch { /* ignore */ }
-      }
-
-      if (error instanceof Error) {
-        (error as any).__isFalError = true;
-        throw error;
-      }
-
-      throw new Error(
-        `FAL AI generation failed: ${
-          error && typeof error === 'object' ? JSON.stringify(error) : 'Unknown error'
-        }`
+    if (!authResult.valid || !authResult.client) {
+      return corsJson(
+        { success: false, error: authResult.error || "API key inválida" },
+        401
       );
     }
+
+    const client = authResult.client;
+
+    // ── Now check rate limit with actual client ID ──
+    const actualRateLimit = await checkRateLimit(
+      `client_${client.id}`,
+      10,
+      60_000
+    );
+    if (!actualRateLimit.allowed) {
+      const waitSec = Math.ceil(
+        (actualRateLimit.resetAt.getTime() - Date.now()) / 1000
+      );
+      return corsJson(
+        {
+          success: false,
+          error: `Límite de rate alcanzado. Reintentá en ${waitSec}s`,
+        },
+        429
+      );
+    }
+
+    // ── Check usage limit (now that we have client) ──
+    const actualGenerationCount = await prisma.generation.count({
+      where: { clientId: client.id },
+    });
+
+    if (client.limit > 0 && actualGenerationCount >= client.limit) {
+      return corsJson(
+        { success: false, error: "Límite de generaciones alcanzado" },
+        403
+      );
+    }
+
+    console.log(`[${requestId}] Starting generation for client ${client.name}`);
+
+    // #region agent log
+    _log('before prisma.generation.create', { clientId: client.id });
+    // #endregion
+
+    // ── Create generation record ──
+    const generation = await prisma.generation.create({
+      data: {
+        clientId: client.id,
+        status: "PROCESSING",
+        model: modelUsed,
+        personImageUrl: (personImageUrl || userImage || '').substring(0, 200),
+        garmentUrls: (garments && garments.length ? garments.map((g: string) => g.substring(0, 200)) : [(garmentImageUrl || '').substring(0, 200)]),
+        startedAt: new Date(),
+      },
+    });
+
+    try {
+      // #region agent log
+      _log('before falClient.generate', { generationId: generation.id });
+      // #endregion
+
+      const personImg = personImageUrl || userImage;
+      const garmentImg = garmentImageUrl || (garments && garments[0]);
+
+      // Explicit validation with clear error messages
+      if (!personImg) {
+        throw new Error('No person image provided (personImageUrl or userImage required)');
+      }
+      if (!garmentImg) {
+        throw new Error('No garment image provided (garmentImageUrl or garments[0] required)');
+      }
+
+      console.log(`[${requestId}] Preparing FAL payload:`);
+      console.log(`[${requestId}]   personImg: ${typeof personImg === 'string' ? (personImg.startsWith('data:') ? 'base64' : 'url') : typeof personImg} - len:${typeof personImg === 'string' ? personImg.length : 0}`);
+      console.log(`[${requestId}]   garmentImg: ${typeof garmentImg === 'string' ? (garmentImg.startsWith('data:') ? 'base64' : 'url') : typeof garmentImg} - len:${typeof garmentImg === 'string' ? garmentImg.length : 0}`);
+      const falStartTime = Date.now();
+      let falResult;
+      try {
+        falResult = await falClient.generate({
+          personImageUrl: personImg,
+          garmentImageUrl: garmentImg,
+          seed: Math.floor(Math.random() * 1000000),
+        });
+      } catch (err) {
+        console.error(`[${requestId}] falClient.generate threw error:`, err);
+        const e = err as any;
+        try {
+          console.error(`[${requestId}] fal error status:`, e?.status);
+          if (e?.body) {
+            console.error(`[${requestId}] fal error body:`, typeof e.body === 'object' ? JSON.stringify(e.body, null, 2) : e.body);
+          }
+        } catch (logErr) {
+          console.error(`[${requestId}] Error logging fal error details:`, logErr);
+        }
+        throw err;
+      }
+      const falDuration = Date.now() - falStartTime;
+
+      // ── Update generation with success + Record metric en paralelo ──
+      await Promise.all([
+        prisma.generation.update({
+          where: { id: generation.id },
+          data: {
+            status: "COMPLETED",
+            resultUrl: falResult.imageUrl,
+            durationMs: Date.now() - startTime,
+            falDurationMs: falDuration,
+            completedAt: new Date(),
+          },
+        }),
+        prisma.metric.create({
+          data: {
+            type: "GENERATION",
+            clientId: client.id,
+            model: modelUsed,
+            durationMs: Date.now() - startTime,
+            status: "success",
+          },
+        })
+      ]);
+
+      console.log(
+        `[${requestId}] Generation completed in ${Date.now() - startTime}ms`
+      );
+
+      return corsJson({
+        success: true,
+        data: {
+          resultUrl: falResult.imageUrl,
+          generationId: generation.id,
+          timing: {
+            totalMs: Date.now() - startTime,
+            falMs: falDuration,
+          },
+        },
+      });
+    } catch (falError) {
+      console.error(`[${requestId}] FAL AI error:`, falError);
+      // #region agent log
+      const _e = falError as Error;
+      _log('falError catch', { errorMessage: _e?.message, name: _e?.name });
+      // #endregion
+      
+      const isUnauthorized = falError instanceof Error && /unauthorized|invalid.*key|authentication/i.test(falError.message);
+      const userError = isUnauthorized
+        ? "FAL_KEY inválida o sin permisos. Verificá tu API key en fal.ai/dashboard/keys"
+        : "Error al generar la imagen";
+      
+      const debugDetails = process.env.DEBUG_FAL === '1' ? (() => {
+        try {
+          const e = falError as any;
+          return {
+            message: e?.message,
+            name: e?.name,
+            status: e?.status,
+            body: typeof e?.body === 'object' ? JSON.stringify(e.body) : e?.body,
+          };
+        } catch (err) {
+          return { debugError: String(err) };
+        }
+      })() : undefined;
+
+      await Promise.all([
+        prisma.generation.update({
+          where: { id: generation.id },
+          data: {
+            status: "ERROR",
+            error: falError instanceof Error ? falError.message : "FAL AI error",
+            durationMs: Date.now() - startTime,
+            completedAt: new Date(),
+          },
+        }),
+        prisma.metric.create({
+          data: {
+            type: "GENERATION",
+            clientId: client.id,
+            model: modelUsed,
+            durationMs: Date.now() - startTime,
+            status: "error",
+            error: falError instanceof Error ? falError.message : "FAL AI error",
+          },
+        })
+      ]);
+
+      const responsePayload: any = { success: false, error: userError };
+      if (debugDetails) responsePayload.debug = debugDetails;
+
+      return corsJson(responsePayload, 500);
+    }
+  } catch (error) {
+    console.error(`[${requestId}] Unexpected error:`, error);
+    // #region agent log
+    const _e = error as Error;
+    fetch('http://127.0.0.1:7242/ingest/6409409d-10bf-4ec6-ac7c-944201295ebb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'api/images/generate/route.ts', message: 'outer catch', data: { requestId, errorMessage: _e?.message, name: _e?.name }, timestamp: Date.now(), hypothesisId: 'H4,H5' }) }).catch(() => {});
+    // #endregion
+    return corsJson(
+      { success: false, error: "Error interno del servidor" },
+      500
+    );
   }
+}
+
+// ── CORS preflight ──
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  });
 }
