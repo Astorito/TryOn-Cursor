@@ -88,13 +88,13 @@ export class FalClient {
     console.log('[FalClient] Calling model:', model);
 
     // Kontext/multi: image_urls[0] = person to edit, image_urls[1] = garment reference
-    const prompt = input.prompt || `The first image shows a person. The second image shows a garment. Edit the first image so the person is wearing the garment from the second image. Keep the person's face, body, pose, background and shoes exactly the same. Only change the clothing.`;
+    const prompt = input.prompt || `Use the first image as the base. The person in the first image should now be wearing the jacket/coat shown in the second image over their current outfit. Do not merge or combine the two images side by side. Output only the person from the first image wearing the garment. Keep face, hair, pose, background, and boots identical.`;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const falInput: Record<string, any> = {
       prompt,
       image_urls: [personImageUrl, garmentImageUrl],
-      guidance_scale: input.guidance_scale ?? 2.5,
+      guidance_scale: input.guidance_scale ?? 4.0,
       num_images: input.num_images ?? 1,
       output_format: input.output_format ?? 'jpeg',
       enhance_prompt: true,
