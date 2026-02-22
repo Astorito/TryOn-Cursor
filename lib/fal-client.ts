@@ -88,7 +88,16 @@ export class FalClient {
     console.log('[FalClient] Calling model:', model);
 
     // Kontext/multi: image_urls[0] = person to edit, image_urls[1] = garment reference
-    const prompt = input.prompt || `Virtual try-on. Edit image 1 only: dress the person in the garment from image 2. Output a single photo — do NOT create a before/after, do NOT show two versions side by side, do NOT split the image. Just one photo of the person wearing the garment. Reproduce the garment exactly: same type, color, brand, shape, texture. Keep face, hair, body, pose, background, shoes identical to image 1.`;
+    const prompt = input.prompt || `You are doing a virtual try-on. Image 1 contains a person. Image 2 contains a garment product photo.
+
+Task: output a single photo of the person from image 1 wearing the garment from image 2.
+
+Rules:
+- Output ONE single photo only. No split screen, no before/after, no collage.
+- The garment must be worn naturally on the person's body: sleeves on arms, pants on legs, dress replacing full outfit, etc.
+- Copy the garment from image 2 with exact fidelity: color, brand, style, material, fit.
+- Do not change the person's face, hair, skin, pose, or background.
+- Ignore how the garment is displayed in image 2 (flat lay, floating, mannequin) — show it worn on the person.`;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const falInput: Record<string, any> = {
