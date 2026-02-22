@@ -684,25 +684,26 @@
     if (document._tryonDragSetup) return;
     document._tryonDragSetup = true;
 
-    document.addEventListener('dragenter', function(e) {
-      if (!state.isOpen) return;
-      e.preventDefault(); e.stopPropagation();
-    }, true);
-
+    // Solo interceptar drops que caigan DENTRO del panel del widget
     document.addEventListener('dragover', function(e) {
       if (!state.isOpen) return;
-      e.preventDefault(); e.stopPropagation();
-      e.dataTransfer.dropEffect = 'copy';
-    }, true);
+      // Solo prevenir default si el target está dentro del widget
+      if (panel && panel.contains(e.target)) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+      }
+    }, false);
 
     document.addEventListener('drop', function(e) {
       if (!state.isOpen || !e.dataTransfer.files.length) return;
+      // Solo interceptar drops dentro del panel
+      if (!panel || !panel.contains(e.target)) return;
       e.preventDefault(); e.stopPropagation();
       var file = e.dataTransfer.files[0];
       var targetIndex = state.garments.findIndex(g => g === null);
       if (targetIndex === -1) targetIndex = 0;
       handleFileFromDrop(file, 'garment', targetIndex);
-    }, true);
+    }, false);
   }
 
   function selectFile(type, index = 0) {
