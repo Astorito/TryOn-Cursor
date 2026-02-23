@@ -66,47 +66,47 @@ export class FalClient {
     }
     fal.config({ credentials });
 
-    // Validate inputs
     if (!input.personImageUrl) throw new Error('personImageUrl is required');
     if (!input.garmentImageUrl) throw new Error('garmentImageUrl is required');
 
     console.log('[FalClient] Uploading images to FAL.ai storage...');
-    console.log('[FalClient] personImageUrl type:', input.personImageUrl.startsWith('data:') ? 'base64' : 'url', '- length:', input.personImageUrl.length);
-    console.log('[FalClient] garmentImageUrl type:', input.garmentImageUrl.startsWith('data:') ? 'base64' : 'url', '- length:', input.garmentImageUrl.length);
+    console.log('[FalClient] personImg:', input.personImageUrl.startsWith('data:') ? 'base64' : 'url', '- len:', input.personImageUrl.length);
+    console.log('[FalClient] garmentImg:', input.garmentImageUrl.startsWith('data:') ? 'base64' : 'url', '- len:', input.garmentImageUrl.length);
 
     const [personImageUrl, garmentImageUrl] = await Promise.all([
       this.uploadImage(input.personImageUrl),
       this.uploadImage(input.garmentImageUrl),
     ]);
 
-    if (!personImageUrl || !personImageUrl.startsWith('http')) throw new Error('Failed to upload person image');
-    if (!garmentImageUrl || !garmentImageUrl.startsWith('http')) throw new Error('Failed to upload garment image');
+    if (!personImageUrl?.startsWith('http')) throw new Error('Failed to upload person image');
+    if (!garmentImageUrl?.startsWith('http')) throw new Error('Failed to upload garment image');
 
     console.log('[FalClient] Images uploaded OK:', { personImageUrl, garmentImageUrl });
 
-    const model = 'fal-ai/flux-pro/kontext/max/multi';
+    const model = 'fal-ai/flux-pro/kontext/multi';
     console.log('[FalClient] Calling model:', model);
 
-    // Kontext/multi: image_urls[0] = person to edit, image_urls[1] = garment reference
-    const prompt = input.prompt || `You are doing a virtual try-on. Image 1 contains a person. Image 2 contains a garment product photo.
+    const prompt = input.prompt || `Virtual try-on task. You have two images:
+- Image 1: a person (do not alter face, hair, skin, body, pose, background, shoes)
+- Image 2: a garment product photo
 
-Task: output a single photo of the person from image 1 wearing the garment from image 2.
+Your job: edit Image 1 so the person is wearing the exact garment from Image 2.
 
-Rules:
-- Output ONE single photo only. No split screen, no before/after, no collage.
-- The garment must be worn naturally on the person's body: sleeves on arms, pants on legs, dress replacing full outfit, etc.
-- Copy the garment from image 2 with exact fidelity: color, brand, style, material, fit.
-- Do not change the person's face, hair, skin, pose, or background.
-- Ignore how the garment is displayed in image 2 (flat lay, floating, mannequin) — show it worn on the person.`;
+Critical rules:
+1. ONE output photo only — no split screen, no before/after, no collage
+2. Garment fidelity is mandatory: reproduce EXACTLY the same color, silhouette, neckline, sleeve length, brand, print, and fabric from Image 2. Do NOT substitute with a similar garment.
+3. If Image 2 shows a white off-shoulder top, the person wears a white off-shoulder top. If red puffer jacket, red puffer jacket. Never invent a replacement.
+4. The garment goes on the person naturally: through sleeves, over shoulders, on legs, etc.
+5. Ignore the display style of Image 2 (flat lay, mannequin, floating) — extract and apply only the garment itself.`;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const falInput: Record<string, any> = {
       prompt,
       image_urls: [personImageUrl, garmentImageUrl],
-      guidance_scale: input.guidance_scale ?? 3.5,
+      guidance_scale: input.guidance_scale ?? 5,
       num_images: input.num_images ?? 1,
       output_format: input.output_format ?? 'jpeg',
-      enhance_prompt: false, // disabled - was rewriting prompt and losing garment specificity
+      enhance_prompt: false,
       safety_tolerance: input.safety_tolerance ?? '2',
       aspect_ratio: input.aspect_ratio ?? '3:4',
       ...(input.seed !== undefined ? { seed: input.seed } : {}),

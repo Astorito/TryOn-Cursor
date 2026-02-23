@@ -9,7 +9,7 @@ import { corsJson } from "@/lib/cors";
 const falClient = new FalClient();
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
 
 /**
@@ -146,27 +146,38 @@ export async function POST(request: NextRequest) {
       // #endregion
 
       const personImg = personImageUrl || userImage;
-      const garmentImg = garmentImageUrl || (garments && garments[0]);
+      const garmentList: string[] = garmentImageUrl
+        ? [garmentImageUrl]
+        : (garments && garments.length ? garments : []);
 
       // Explicit validation with clear error messages
       if (!personImg) {
         throw new Error('No person image provided (personImageUrl or userImage required)');
       }
-      if (!garmentImg) {
+      if (!garmentList.length) {
         throw new Error('No garment image provided (garmentImageUrl or garments[0] required)');
       }
 
-      console.log(`[${requestId}] Preparing FAL payload:`);
-      console.log(`[${requestId}]   personImg: ${typeof personImg === 'string' ? (personImg.startsWith('data:') ? 'base64' : 'url') : typeof personImg} - len:${typeof personImg === 'string' ? personImg.length : 0}`);
-      console.log(`[${requestId}]   garmentImg: ${typeof garmentImg === 'string' ? (garmentImg.startsWith('data:') ? 'base64' : 'url') : typeof garmentImg} - len:${typeof garmentImg === 'string' ? garmentImg.length : 0}`);
+      console.log(`[${requestId}] Preparing FAL payload — ${garmentList.length} garment(s), sequential mode`);
+
       const falStartTime = Date.now();
-      let falResult;
+      let falResult: { imageUrl: string } = { imageUrl: '' };
+
       try {
-        falResult = await falClient.generate({
-          personImageUrl: personImg,
-          garmentImageUrl: garmentImg,
-          seed: Math.floor(Math.random() * 1000000),
-        });
+        // Sequential try-on: apply each garment on top of the previous result
+        let currentPersonImg = personImg;
+        for (let gi = 0; gi < garmentList.length; gi++) {
+          const garmentImg = garmentList[gi];
+          console.log(`[${requestId}]   Step ${gi + 1}/${garmentList.length}: personImg len=${currentPersonImg.length}, garmentImg len=${garmentImg.length}`);
+          falResult = await falClient.generate({
+            personImageUrl: currentPersonImg,
+            garmentImageUrl: garmentImg,
+            seed: Math.floor(Math.random() * 1000000),
+          });
+          // Use the result as the person image for the next garment
+          currentPersonImg = falResult.imageUrl;
+          console.log(`[${requestId}]   Step ${gi + 1} done: ${falResult.imageUrl}`);
+        }
       } catch (err) {
         console.error(`[${requestId}] falClient.generate threw error:`, err);
         const e = err as any;
