@@ -584,7 +584,8 @@
       <!-- Header -->
       <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px ${layoutConfig.horizontalPadding}px; flex-shrink: 0; border-bottom: 1px solid #e5e7eb; box-sizing: border-box;">
         <span style="font-size: 13px; color: #6b7280; font-weight: 500; display: flex; align-items: center; gap: 4px;">
-          ✨ TryOn
+          <svg width="16" height="16" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 10 L23.5 15 L28 16 L23.5 17 L22 22 L20.5 17 L16 16 L20.5 15 Z" fill="#FFD700"/><path d="M13 18 L14 21 L17 22 L14 23 L13 26 L12 23 L9 22 L12 21 Z" fill="#FFD700"/><path d="M15 10 L15.8 12.5 L18 13 L15.8 13.5 L15 16 L14.2 13.5 L12 13 L14.2 12.5 Z" fill="#FFD700"/></svg>
+          trylook-ai.com
         </span>
         <button class="close-panel-btn" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #6b7280; padding: 0; line-height: 1; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;" title="Close panel">×</button>
       </div>
@@ -684,15 +685,40 @@
     if (container._tryonDragSetup) return;
     container._tryonDragSetup = true;
 
-    // Listeners en el container (shadow host) — no bloquea el resto de la página
-    container.addEventListener('dragover', function(e) {
-      if (!state.isOpen) return;
+    // En Mac/Safari el shadow host tiene pointer-events:none y no recibe drag events.
+    // Usamos el panel directamente (pointer-events:auto) para capturar drag dentro del widget.
+    // Para archivos soltados FUERA del panel, usamos document con detección de posición.
+
+    // Drag sobre el panel (funciona en Mac y Windows)
+    panel.addEventListener('dragover', function(e) {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'copy';
     }, false);
 
-    container.addEventListener('drop', function(e) {
+    panel.addEventListener('drop', function(e) {
+      if (!e.dataTransfer.files.length) return;
+      e.preventDefault(); e.stopPropagation();
+      var file = e.dataTransfer.files[0];
+      var targetIndex = state.garments.findIndex(g => g === null);
+      if (targetIndex === -1) targetIndex = 0;
+      handleFileFromDrop(file, 'garment', targetIndex);
+    }, false);
+
+    // Fallback para document — solo cuando el panel está abierto y el drop cae cerca
+    document.addEventListener('dragover', function(e) {
+      if (!state.isOpen) return;
+      var rect = panel.getBoundingClientRect();
+      var inPanel = e.clientX >= rect.left && e.clientX <= rect.right &&
+                    e.clientY >= rect.top && e.clientY <= rect.bottom;
+      if (inPanel) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
+    }, false);
+
+    document.addEventListener('drop', function(e) {
       if (!state.isOpen || !e.dataTransfer.files.length) return;
+      var rect = panel.getBoundingClientRect();
+      var inPanel = e.clientX >= rect.left && e.clientX <= rect.right &&
+                    e.clientY >= rect.top && e.clientY <= rect.bottom;
+      if (!inPanel) return;
       e.preventDefault(); e.stopPropagation();
       var file = e.dataTransfer.files[0];
       var targetIndex = state.garments.findIndex(g => g === null);
@@ -1069,14 +1095,17 @@
     const resetBtn = shadowQuerySelector('.reset-btn');
     if (resetBtn) {
       resetBtn.onclick = () => {
-        state.userImage = null;
-        state.userImageFile = null;
+        // Keep userImage so the model photo stays selected
         state.garments = [null, null, null];
         state.garmentFiles = [null, null, null];
         state.resultUrl = null;
         panel.style.height = layoutConfig.panelTotalHeight + 'px';
         panel.style.display = 'flex';
         renderPanel();
+        // Restore user image in the box after render
+        if (state.userImage) {
+          setTimeout(() => updateUserUploadBox(true, state.userImage), 0);
+        }
       };
     }
 
