@@ -81,7 +81,7 @@ Output a single realistic photo of the person wearing the garment naturally.`
       ? [personUrl, garmentUrl, bottomUrl]
       : [personUrl, garmentUrl];
 
-    const model = 'fal-ai/nano-banana-pro/edit';
+    const model = 'fal-ai/nano-banana/edit';
     console.log('[FalClient] Calling model:', model, '| images:', image_urls.length);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -91,6 +91,8 @@ Output a single realistic photo of the person wearing the garment naturally.`
       num_images: 1,
       output_format: 'jpeg',
       safety_tolerance: '4',
+      aspect_ratio: '3:4',
+      resolution: '1K',
       limit_generations: true,
     };
 
