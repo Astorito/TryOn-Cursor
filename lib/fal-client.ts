@@ -70,11 +70,11 @@ export class FalClient {
       ? `This is a virtual try-on task. Image 1 is a person. Image 2 is a top garment. Image 3 is a bottom garment.
 Dress the person from Image 1 wearing exactly the top garment from Image 2 and the bottom garment from Image 3.
 Keep the person's face, hair, skin tone, body, pose, and background completely unchanged.
-Output a single realistic photo of the person wearing both garments naturally.`
+Output a single realistic photo of the person wearing both garments naturally.The output CAN NOT BE the same as image 1`
       : `This is a virtual try-on task. Image 1 is a person. Image 2 is a garment.
 Dress the person from Image 1 wearing exactly the garment from Image 2.
 Keep the person's face, hair, skin tone, body, pose, and background completely unchanged.
-Output a single realistic photo of the person wearing the garment naturally.`
+Output a single realistic photo of the person wearing the garment naturally.The output CAN NOT BE the same as image 1`
     );
 
     const image_urls = hasBottom
