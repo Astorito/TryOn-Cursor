@@ -1127,13 +1127,25 @@
   }
 
   function startLoadingAnimation() {
+    const TOTAL_MS = 25000;
+    const INTERVAL_MS = 300;
+    const totalTicks = TOTAL_MS / INTERVAL_MS; // ~83 ticks
+    const fastTicks = Math.round(totalTicks * 0.6); // 60% of time → 0 to 90
+    const slowTicks = totalTicks - fastTicks;       // 40% of time → 90 to 99
+    let tick = 0;
+
     const progressInterval = setInterval(() => {
-      if (state.loadingProgress < 90) {
-        const increment = Math.max(0.5, (90 - state.loadingProgress) / 15);
-        state.loadingProgress = Math.min(90, state.loadingProgress + increment);
-        updateProgressBar();
+      tick++;
+      if (tick <= fastTicks) {
+        // Linear 0→90 in first 60% of time
+        state.loadingProgress = Math.min(90, (tick / fastTicks) * 90);
+      } else {
+        // Linear 90→99 in last 40% of time — never reaches 100
+        const slowTick = tick - fastTicks;
+        state.loadingProgress = Math.min(99, 90 + (slowTick / slowTicks) * 9);
       }
-    }, 300);
+      updateProgressBar();
+    }, INTERVAL_MS);
 
     let phaseTimeout;
     function nextPhase() {
