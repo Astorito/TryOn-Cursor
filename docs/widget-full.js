@@ -594,9 +594,13 @@
       <div style="flex: 1; display: flex; flex-direction: column; padding: ${layoutConfig.verticalGap}px ${layoutConfig.horizontalPadding}px; gap: ${layoutConfig.verticalGap}px; overflow: hidden; box-sizing: border-box;">
         <div style="font-size: 12px; font-weight: 600; color: #374151; margin: 0; flex-shrink: 0;">Upload your photo</div>
         <div id="user-upload" class="tryon-upload-box" style="width: ${sizes.userBoxWidth}px; height: ${sizes.userBoxHeight}px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;">
-          <div style="font-size: 40px; margin-bottom: 8px; opacity: 0.6;">📷</div>
+          <div style="font-size: 36px; margin-bottom: 6px; opacity: 0.5;">📷</div>
           <div style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 2px;">Upload your photo</div>
-          <div style="font-size: 11px; color: #6b7280;">Click or drag to upload</div>
+          <div style="font-size: 11px; color: #6b7280; margin-bottom: 10px;">Click or drag to upload</div>
+          <button id="open-camera-btn" style="background: white; border: 1.5px solid #e0e7ff; border-radius: 8px; padding: 6px 12px; font-size: 11px; font-weight: 600; color: #667eea; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.2s;" onclick="event.stopPropagation()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Use Camera
+          </button>
         </div>
 
         <div style="font-size: 12px; font-weight: 600; color: #374151; margin: 0; flex-shrink: 0;">Add garments (up to 3)</div>
@@ -631,8 +635,19 @@
 
     const userUpload = shadowQuerySelector('#user-upload');
     if (userUpload) {
-      userUpload.onclick = () => selectFile('user');
+      userUpload.onclick = (e) => {
+        if (e.target.closest('#open-camera-btn')) return;
+        selectFile('user');
+      };
       addDragDrop(userUpload, 'user', 0);
+
+      // Camera button
+      const cameraBtnEl = shadowQuerySelector('#open-camera-btn');
+      if (cameraBtnEl) {
+        cameraBtnEl.onclick = (e) => { e.stopPropagation(); openCamera(); };
+        cameraBtnEl.onmouseover = () => { cameraBtnEl.style.background = '#f0f4ff'; cameraBtnEl.style.borderColor = '#667eea'; };
+        cameraBtnEl.onmouseout = () => { cameraBtnEl.style.background = 'white'; cameraBtnEl.style.borderColor = '#e0e7ff'; };
+      }
     }
 
     for (let i = 0; i < 3; i++) {
@@ -725,6 +740,69 @@
       if (targetIndex === -1) targetIndex = 0;
       handleFileFromDrop(file, 'garment', targetIndex);
     }, false);
+  }
+
+  function openCamera() {
+    var shadow = container._shadowRoot;
+
+    // Create modal inside shadow DOM
+    var modal = document.createElement('div');
+    modal.id = 'camera-modal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:2147483648;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
+
+    modal.innerHTML = `
+      <div style="position:relative;border-radius:16px;overflow:hidden;background:#000;max-width:340px;width:90%;">
+        <video id="camera-preview" autoplay playsinline muted style="width:100%;display:block;border-radius:16px;"></video>
+        <button id="close-camera" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.6);border:none;color:white;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">×</button>
+      </div>
+      <button id="capture-btn" style="background:white;border:none;border-radius:50%;width:60px;height:60px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.3);transition:transform 0.15s;">
+        <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);"></div>
+      </button>
+      <canvas id="camera-canvas" style="display:none;"></canvas>
+    `;
+
+    shadow.appendChild(modal);
+
+    var video = shadow.querySelector('#camera-preview');
+    var canvas = shadow.querySelector('#camera-canvas');
+    var stream = null;
+
+    // Start camera
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+      .then(function(s) {
+        stream = s;
+        video.srcObject = stream;
+      })
+      .catch(function(err) {
+        modal.innerHTML = '<div style="color:white;text-align:center;padding:24px;"><div style="font-size:32px;margin-bottom:12px;">📷</div><div style="font-size:14px;">Camera not available<br><span style="font-size:12px;color:#aaa;">' + err.message + '</span></div></div>';
+        setTimeout(function() { closeModal(); }, 3000);
+      });
+
+    function closeModal() {
+      if (stream) { stream.getTracks().forEach(function(t) { t.stop(); }); }
+      if (shadow.contains(modal)) shadow.removeChild(modal);
+    }
+
+    function capture() {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      closeModal();
+      // Use captured photo as user image
+      state.userImage = dataUrl;
+      state.userImageFile = null;
+      updateUserUploadBox(true, dataUrl);
+      updateSubmitButton();
+    }
+
+    shadow.querySelector('#close-camera').onclick = closeModal;
+    shadow.querySelector('#capture-btn').onclick = capture;
+    shadow.querySelector('#capture-btn').onmouseover = function() { this.style.transform = 'scale(1.08)'; };
+    shadow.querySelector('#capture-btn').onmouseout = function() { this.style.transform = 'scale(1)'; };
+
+    // Close on backdrop click
+    modal.onclick = function(e) { if (e.target === modal) closeModal(); };
   }
 
   function selectFile(type, index = 0) {
