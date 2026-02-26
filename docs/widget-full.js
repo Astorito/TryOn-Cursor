@@ -743,33 +743,72 @@
   }
 
   function openCamera() {
-    var shadow = container._shadowRoot;
-
-    // Create modal inside shadow DOM
+    // Put modal in document.body so events work reliably outside shadow DOM
     var modal = document.createElement('div');
-    modal.id = 'camera-modal';
-    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:2147483648;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:2147483648;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;';
+    document.body.appendChild(modal);
 
-    modal.innerHTML = `
-      <div style="position:relative;border-radius:16px;overflow:hidden;background:#000;max-width:340px;width:90%;">
-        <video id="camera-preview" autoplay playsinline muted style="width:100%;display:block;border-radius:16px;"></video>
-        <button id="close-camera" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.6);border:none;color:white;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">×</button>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
-        <div id="countdown" style="display:none;color:white;font-size:48px;font-weight:700;line-height:1;text-shadow:0 2px 8px rgba(0,0,0,0.5);"></div>
-        <button id="capture-btn" style="background:white;border:none;border-radius:50%;width:64px;height:64px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.3);transition:transform 0.15s,opacity 0.15s;">
-          <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);"></div>
-        </button>
-        <div style="color:rgba(255,255,255,0.6);font-size:11px;">Tap to take photo</div>
-      </div>
-      <canvas id="camera-canvas" style="display:none;"></canvas>
-    `;
+    // Video element
+    var videoWrap = document.createElement('div');
+    videoWrap.style.cssText = 'position:relative;border-radius:16px;overflow:hidden;background:#000;max-width:340px;width:90%;';
 
-    shadow.appendChild(modal);
+    var video = document.createElement('video');
+    video.autoplay = true;
+    video.playsInline = true;
+    video.muted = true;
+    video.style.cssText = 'width:100%;display:block;border-radius:16px;';
+    videoWrap.appendChild(video);
 
-    var video = modal.querySelector('#camera-preview');
-    var canvas = modal.querySelector('#camera-canvas');
+    var closeBtn = document.createElement('button');
+    closeBtn.textContent = '×';
+    closeBtn.style.cssText = 'position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.6);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:20px;line-height:1;z-index:10;';
+    videoWrap.appendChild(closeBtn);
+    modal.appendChild(videoWrap);
+
+    // Countdown + capture button
+    var bottomWrap = document.createElement('div');
+    bottomWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;';
+
+    var countEl = document.createElement('div');
+    countEl.style.cssText = 'display:none;color:white;font-size:56px;font-weight:700;line-height:1;text-shadow:0 2px 12px rgba(0,0,0,0.6);min-height:64px;';
+    bottomWrap.appendChild(countEl);
+
+    var captureBtn = document.createElement('button');
+    captureBtn.style.cssText = 'background:white;border:none;border-radius:50%;width:68px;height:68px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,0.4);transition:transform 0.15s,opacity 0.2s;padding:0;';
+    var inner = document.createElement('div');
+    inner.style.cssText = 'width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);';
+    captureBtn.appendChild(inner);
+    bottomWrap.appendChild(captureBtn);
+
+    var hint = document.createElement('div');
+    hint.textContent = 'Tap to take photo';
+    hint.style.cssText = 'color:rgba(255,255,255,0.6);font-size:12px;';
+    bottomWrap.appendChild(hint);
+    modal.appendChild(bottomWrap);
+
+    // Canvas (hidden)
+    var canvas = document.createElement('canvas');
+    canvas.style.display = 'none';
+    modal.appendChild(canvas);
+
     var stream = null;
+
+    function closeModal() {
+      if (stream) stream.getTracks().forEach(function(t) { t.stop(); });
+      if (document.body.contains(modal)) document.body.removeChild(modal);
+    }
+
+    function capture() {
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      closeModal();
+      state.userImage = dataUrl;
+      state.userImageFile = null;
+      updateUserUploadBox(true, dataUrl);
+      updateSubmitButton();
+    }
 
     // Start camera
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
@@ -778,37 +817,19 @@
         video.srcObject = stream;
       })
       .catch(function(err) {
-        modal.innerHTML = '<div style="color:white;text-align:center;padding:24px;"><div style="font-size:32px;margin-bottom:12px;">📷</div><div style="font-size:14px;">Camera not available<br><span style="font-size:12px;color:#aaa;">' + err.message + '</span></div></div>';
-        setTimeout(function() { closeModal(); }, 3000);
+        videoWrap.innerHTML = '<div style="color:white;text-align:center;padding:32px;font-size:13px;">📷<br><br>Camera not available<br><span style="color:#aaa;font-size:11px;">' + err.message + '</span></div>';
+        setTimeout(closeModal, 3000);
       });
 
-    function closeModal() {
-      if (stream) { stream.getTracks().forEach(function(t) { t.stop(); }); }
-      if (shadow.contains(modal)) shadow.removeChild(modal);
-    }
+    // Events
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', function(e) { if (e.target === modal) closeModal(); });
 
-    function capture() {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      canvas.getContext('2d').drawImage(video, 0, 0);
-      var dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-      closeModal();
-      // Use captured photo as user image
-      state.userImage = dataUrl;
-      state.userImageFile = null;
-      updateUserUploadBox(true, dataUrl);
-      updateSubmitButton();
-    }
-
-    modal.querySelector('#close-camera').onclick = closeModal;
-
-    // Capture with 3 second countdown
-    modal.querySelector('#capture-btn').onclick = function() {
-      var btn = modal.querySelector('#capture-btn');
-      var countEl = modal.querySelector('#countdown');
+    captureBtn.addEventListener('click', function() {
+      captureBtn.disabled = true;
+      captureBtn.style.opacity = '0.5';
+      hint.style.display = 'none';
       var count = 3;
-      btn.disabled = true;
-      btn.style.opacity = '0.5';
       countEl.textContent = count;
       countEl.style.display = 'block';
       var interval = setInterval(function() {
@@ -821,13 +842,10 @@
           capture();
         }
       }, 1000);
-    };
+    });
 
-    modal.querySelector('#capture-btn').onmouseover = function() { if (!this.disabled) this.style.transform = 'scale(1.08)'; };
-    modal.querySelector('#capture-btn').onmouseout = function() { this.style.transform = 'scale(1)'; };
-
-    // Close on backdrop click
-    modal.onclick = function(e) { if (e.target === modal) closeModal(); };
+    captureBtn.addEventListener('mouseover', function() { if (!captureBtn.disabled) captureBtn.style.transform = 'scale(1.08)'; });
+    captureBtn.addEventListener('mouseout', function() { captureBtn.style.transform = 'scale(1)'; });
   }
 
   function selectFile(type, index = 0) {
