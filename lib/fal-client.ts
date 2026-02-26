@@ -65,6 +65,7 @@ export class FalClient {
     console.log('[FalClient] All uploaded OK');
 
     // Nano Banana Pro: natural language prompt, no trigger words needed
+    const hasBottom = !!bottomUrl;
     const prompt = input.prompt || (hasBottom
       ? `Virtual try-on: take the person in image 1 and dress them in the top garment from image 2 and the bottom garment from image 3. The output must show the SAME person wearing BOTH garments. Do not alter the person's face, hair, skin, pose or background. Replace only the clothing. Show the full result as a single photo.`
       : `Virtual try-on: take the person in image 1 and dress them in the garment from image 2. The output must show the SAME person wearing that exact garment. Do not alter the person's face, hair, skin, pose or background. Replace only the clothing. Show the full result as a single photo.`
