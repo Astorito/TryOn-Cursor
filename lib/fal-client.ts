@@ -75,7 +75,7 @@ export class FalClient {
       ? [personUrl, garmentUrl, bottomUrl]
       : [personUrl, garmentUrl];
 
-    const model = 'fal-ai/nano-banana-pro/edit';
+    const model = 'fal-ai/nano-banana-2/edit';
     console.log('[FalClient] Calling model:', model, '| images:', image_urls.length);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
