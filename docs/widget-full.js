@@ -15,6 +15,7 @@
     garments: [null, null, null],
     garmentFiles: [null, null, null],
     isGenerating: false,
+    uploadedUrls: {},  // cache: base64 hash -> FAL url
     resultUrl: null,
     error: null,
     currentLoadingPhase: 0,
@@ -80,6 +81,36 @@
       };
       img.src = base64;
     });
+  }
+
+  // Pre-upload image to FAL storage in background
+  function preUploadImage(base64, cacheKey) {
+    if (state.uploadedUrls[cacheKey]) return; // already uploaded
+    state.uploadedUrls[cacheKey] = 'pending';
+    fetch(BACKEND_URL + '/api/images/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64 })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        state.uploadedUrls[cacheKey] = data.url;
+        console.log('[TryOn] Pre-uploaded:', cacheKey.substring(0, 20), '->', data.url.substring(0, 50));
+      } else {
+        delete state.uploadedUrls[cacheKey];
+      }
+    })
+    .catch(() => { delete state.uploadedUrls[cacheKey]; });
+  }
+
+  // Get cached URL or return original base64
+  function getImageUrl(base64) {
+    if (!base64) return base64;
+    var key = base64.substring(0, 100);
+    var cached = state.uploadedUrls[key];
+    if (cached && cached !== 'pending') return cached;
+    return base64; // fallback to base64 if not ready
   }
 
   function init() {
@@ -889,6 +920,8 @@
           state.garmentFiles[index] = file;
           updateGarmentBox(index, true, compressedBase64);
         }
+        // Pre-upload in background immediately
+        preUploadImage(compressedBase64, compressedBase64.substring(0, 100));
         updateSubmitButton();
       }).catch(function(error) {
         console.error('Error compressing image:', error);
@@ -1041,13 +1074,19 @@
 
     showLoading();
 
+    // Use pre-uploaded URLs if available (faster) or fallback to base64
+    const userImagePayload = getImageUrl(state.userImage);
+    const garmentsPayload = state.garments.filter(g => g !== null).map(g => getImageUrl(g));
+    const usingCache = userImagePayload.startsWith('http') || garmentsPayload.some(g => g.startsWith('http'));
+    console.log('[TryOn] Generate - using cached URLs:', usingCache);
+
     fetch(BACKEND_URL + '/api/images/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         apiKey: API_KEY,
-        userImage: state.userImage,
-        garments: state.garments.filter(g => g !== null)
+        userImage: userImagePayload,
+        garments: garmentsPayload
       })
     })
     .then(response => response.json())
