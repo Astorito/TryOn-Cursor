@@ -755,16 +755,20 @@
         <video id="camera-preview" autoplay playsinline muted style="width:100%;display:block;border-radius:16px;"></video>
         <button id="close-camera" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.6);border:none;color:white;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">×</button>
       </div>
-      <button id="capture-btn" style="background:white;border:none;border-radius:50%;width:60px;height:60px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.3);transition:transform 0.15s;">
-        <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);"></div>
-      </button>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div id="countdown" style="display:none;color:white;font-size:48px;font-weight:700;line-height:1;text-shadow:0 2px 8px rgba(0,0,0,0.5);"></div>
+        <button id="capture-btn" style="background:white;border:none;border-radius:50%;width:64px;height:64px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.3);transition:transform 0.15s,opacity 0.15s;">
+          <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);"></div>
+        </button>
+        <div style="color:rgba(255,255,255,0.6);font-size:11px;">Tap to take photo</div>
+      </div>
       <canvas id="camera-canvas" style="display:none;"></canvas>
     `;
 
     shadow.appendChild(modal);
 
-    var video = shadow.querySelector('#camera-preview');
-    var canvas = shadow.querySelector('#camera-canvas');
+    var video = modal.querySelector('#camera-preview');
+    var canvas = modal.querySelector('#camera-canvas');
     var stream = null;
 
     // Start camera
@@ -796,10 +800,31 @@
       updateSubmitButton();
     }
 
-    shadow.querySelector('#close-camera').onclick = closeModal;
-    shadow.querySelector('#capture-btn').onclick = capture;
-    shadow.querySelector('#capture-btn').onmouseover = function() { this.style.transform = 'scale(1.08)'; };
-    shadow.querySelector('#capture-btn').onmouseout = function() { this.style.transform = 'scale(1)'; };
+    modal.querySelector('#close-camera').onclick = closeModal;
+
+    // Capture with 3 second countdown
+    modal.querySelector('#capture-btn').onclick = function() {
+      var btn = modal.querySelector('#capture-btn');
+      var countEl = modal.querySelector('#countdown');
+      var count = 3;
+      btn.disabled = true;
+      btn.style.opacity = '0.5';
+      countEl.textContent = count;
+      countEl.style.display = 'block';
+      var interval = setInterval(function() {
+        count--;
+        if (count > 0) {
+          countEl.textContent = count;
+        } else {
+          clearInterval(interval);
+          countEl.style.display = 'none';
+          capture();
+        }
+      }, 1000);
+    };
+
+    modal.querySelector('#capture-btn').onmouseover = function() { if (!this.disabled) this.style.transform = 'scale(1.08)'; };
+    modal.querySelector('#capture-btn').onmouseout = function() { this.style.transform = 'scale(1)'; };
 
     // Close on backdrop click
     modal.onclick = function(e) { if (e.target === modal) closeModal(); };
