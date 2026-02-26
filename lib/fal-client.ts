@@ -65,16 +65,9 @@ export class FalClient {
     console.log('[FalClient] All uploaded OK');
 
     // Nano Banana Pro: natural language prompt, no trigger words needed
-    const hasBottom = !!bottomUrl;
     const prompt = input.prompt || (hasBottom
-      ? `This is a virtual try-on task. Image 1 is a person. Image 2 is a top garment. Image 3 is a bottom garment.
-Dress the person from Image 1 wearing exactly the top garment from Image 2 and the bottom garment from Image 3.
-Keep the person's face, hair, skin tone, body, pose, and background completely unchanged.
-Output a single realistic photo of the person wearing both garments naturally.The output CAN NOT BE the same as image 1`
-      : `This is a virtual try-on task. Image 1 is a person. Image 2 is a garment.
-Dress the person from Image 1 wearing exactly the garment from Image 2.
-Keep the person's face, hair, skin tone, body, pose, and background completely unchanged.
-Output a single realistic photo of the person wearing the garment naturally.The output CAN NOT BE the same as image 1`
+      ? `Virtual try-on: take the person in image 1 and dress them in the top garment from image 2 and the bottom garment from image 3. The output must show the SAME person wearing BOTH garments. Do not alter the person's face, hair, skin, pose or background. Replace only the clothing. Show the full result as a single photo.`
+      : `Virtual try-on: take the person in image 1 and dress them in the garment from image 2. The output must show the SAME person wearing that exact garment. Do not alter the person's face, hair, skin, pose or background. Replace only the clothing. Show the full result as a single photo.`
     );
 
     const image_urls = hasBottom
