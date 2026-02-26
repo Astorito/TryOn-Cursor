@@ -54,10 +54,10 @@
 
   // Loading phases — FIX: added description to every phase
   const loadingPhases = [
-    { text: 'Analyzing',  description: 'Reading your photo and garment details...', duration: 3000 },
-    { text: 'Adjusting',  description: 'Fitting the garment to your measurements...', duration: 3000 },
-    { text: 'Applying',   description: 'Applying the garment to your image...', duration: 4000 },
-    { text: 'Finalizing', description: 'Adding the finishing touches...', duration: Infinity }
+    { text: 'Scanning your look',     emoji: '👀', description: 'Analyzing your photo...', duration: 4000 },
+    { text: 'Picking up the garment', emoji: '👕', description: 'Identifying fabric, color & fit...', duration: 5000 },
+    { text: 'Getting dressed',        emoji: '✨', description: 'AI is putting the outfit on you...', duration: 6000 },
+    { text: 'Almost ready',           emoji: '🪄', description: 'Adding final details...', duration: Infinity }
   ];
 
   // Image compression
@@ -525,6 +525,11 @@
         transition: background 0.2s;
       }
 
+      @keyframes tryon-bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+      }
+
       .tryon-remove-btn:hover {
         background: rgba(0,0,0,0.85);
       }
@@ -871,9 +876,9 @@
     const reader = new FileReader();
     reader.onload = function(e) {
       const base64 = e.target.result;
-      // Kontext/multi needs high-res for brand + texture detection
-      var maxDim = (type === 'user') ? 1200 : 1024;
-      var qual   = (type === 'user') ? 0.92  : 0.90;
+      // Nano Banana Pro works well at 800px — smaller = faster upload
+      var maxDim = (type === 'user') ? 800 : 800;
+      var qual   = (type === 'user') ? 0.88 : 0.88;
       compressImage(base64, maxDim, qual).then(function(compressedBase64) {
         if (type === 'user') {
           state.userImage = compressedBase64;
@@ -1121,21 +1126,22 @@
 
   function updateLoadingText() {
     const phase = loadingPhases[state.currentLoadingPhase];
-    // FIX: use phase.description (now defined), with a safe fallback
     const description = phase.description || '';
+    const emoji = phase.emoji || '✨';
+    const phaseIndex = state.currentLoadingPhase;
+    const dots = Array.from({length: 4}, (_, i) =>
+      `<div style="width:8px;height:8px;border-radius:50%;background:${i === phaseIndex ? 'linear-gradient(135deg,#667eea,#764ba2)' : '#e5e7eb'};transition:background 0.4s;"></div>`
+    ).join('');
     loadingOverlay.innerHTML = `
-      <div class="tryon-loading-content">
-        <div class="tryon-loading-icon">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: #667eea;">
-            <path d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.012ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 0 1-.75 0 .375.375 0 0 1 .75 0Z"/>
-          </svg>
-        </div>
-        <div class="tryon-loading-text">${phase.text}</div>
-        <div class="tryon-loading-desc">${description}</div>
+      <div class="tryon-loading-content" style="gap:0;">
+        <div style="font-size:52px;margin-bottom:16px;animation:tryon-bounce 1.2s ease-in-out infinite;">${emoji}</div>
+        <div class="tryon-loading-text" style="margin-bottom:6px;">${phase.text}</div>
+        <div class="tryon-loading-desc" style="margin-bottom:24px;">${description}</div>
+        <div style="display:flex;gap:8px;margin-bottom:28px;">${dots}</div>
       </div>
       <div class="tryon-progress-container">
         <div class="tryon-progress-header">
-          <span class="tryon-progress-label">PROCESSING</span>
+          <span class="tryon-progress-label">AI WORKING</span>
           <span class="tryon-progress-percent">${Math.round(state.loadingProgress)}%</span>
         </div>
         <div class="tryon-progress-bar">
