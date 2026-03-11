@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, email, limit: clientLimit, domains } = body;
+    const { name, email, website, limit: clientLimit, domains } = body;
 
     if (!name || typeof name !== "string" || name.trim().length === 0) {
       return NextResponse.json(
@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
     const createData = {
       name: name.trim(),
       email: email?.trim() || null,
+      website: website?.trim() || null,
       apiKey,
       limit: clientLimit || 5000,
       allowedDomains: domains?.length
@@ -114,6 +115,8 @@ export async function POST(request: NextRequest) {
       userMessage = "No se pudo conectar a la base de datos. Revisá que DATABASE_URL sea correcta y que el servidor (ej. Supabase) esté activo y accesible.";
     else if (isTableMissing)
       userMessage = "Las tablas de la base de datos no existen. En la raíz del proyecto ejecutá: npm run prisma:push";
+    else
+      userMessage = `Error al crear cliente [${prismaCode ?? errName ?? "unknown"}]: ${errMessage.slice(0, 200)}`;
     return NextResponse.json(
       { success: false, error: userMessage },
       { status: 500 }
