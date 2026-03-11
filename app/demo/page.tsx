@@ -2,54 +2,18 @@
 
 import { useEffect, useState } from "react";
 
-/**
- * Página demo del widget TryOn
- *
- * Carga el widget JS manualmente para asegurar que el atributo
- * data-tryon-key se pase correctamente al script.
- * Acepta ?key=xxx en la URL, o busca la primera API key existente.
- */
+const WIDGET_SRC = "https://try-on-cursor.vercel.app/api/widget";
+const WIDGET_KEY = "tryon_mmm8m0on_i4v68sel";
+
 export default function DemoPage() {
   const [widgetLoaded, setWidgetLoaded] = useState(false);
-  const [apiKey, setApiKey] = useState<string | null>(null);
-  const [loadingKey, setLoadingKey] = useState(true);
-  const [scriptOrigin, setScriptOrigin] = useState("http://localhost:3001");
-
-  // Obtener API key: query param ?key= o la primera empresa registrada
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const keyParam = params.get("key");
-    if (keyParam) {
-      setApiKey(keyParam);
-      setLoadingKey(false);
-      return;
-    }
-    // Si no hay param, buscar la primera empresa
-    fetch("/api/clients")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success && data.clients?.length > 0) {
-          setApiKey(data.clients[0].apiKey);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoadingKey(false));
-  }, []);
 
   useEffect(() => {
-    setScriptOrigin(window.location.origin);
-  }, []);
-
-  // Cargar widget cuando tengamos API key
-  useEffect(() => {
-    if (!apiKey) return;
-
     const script = document.createElement("script");
-    // Use explicit origin and .js path to avoid colliding with webpack/next runtime routes
-    script.src = `${scriptOrigin}/api/widget.js`;
+    script.src = WIDGET_SRC;
     script.type = "text/javascript";
     script.async = true;
-    script.dataset.tryonKey = apiKey || "";
+    script.dataset.tryonKey = WIDGET_KEY;
     script.onload = () => setWidgetLoaded(true);
     script.onerror = (e) => console.error("Error cargando widget TryOn", e);
     document.body.appendChild(script);
@@ -59,7 +23,7 @@ export default function DemoPage() {
         document.body.removeChild(script);
       }
     };
-  }, [apiKey, scriptOrigin]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
@@ -98,20 +62,10 @@ export default function DemoPage() {
           <div className="inline-flex items-center px-6 py-3 bg-green-100 text-green-800 rounded-full text-sm font-medium">
             <span
               className={`w-2 h-2 rounded-full mr-2 ${
-                widgetLoaded
-                  ? "bg-green-400 animate-pulse"
-                  : loadingKey
-                  ? "bg-yellow-400"
-                  : apiKey
-                  ? "bg-yellow-400"
-                  : "bg-red-400"
+                widgetLoaded ? "bg-green-400 animate-pulse" : "bg-yellow-400"
               }`}
             ></span>
-            {loadingKey
-              ? "Buscando API key..."
-              : !apiKey
-              ? "No hay empresas creadas. Creá una desde el Dashboard primero."
-              : widgetLoaded
+            {widgetLoaded
               ? 'Widget activo — Hacé clic en "✨ Try Look" abajo a la derecha'
               : "Cargando widget..."}
           </div>
@@ -226,7 +180,7 @@ export default function DemoPage() {
           </p>
           <pre className="bg-gray-900 text-green-400 p-4 rounded-lg text-sm overflow-x-auto">
 {`<script
-  src="${scriptOrigin}/api/widget"
+  src="${WIDGET_SRC}"
   data-tryon-key="TU_API_KEY_AQUI"
 ></script>`}
           </pre>
