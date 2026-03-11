@@ -62,18 +62,8 @@ export class FalClient {
 
     const inputUrls = [personUrl, garmentUrl];
 
-    // Prompt optimizado segun guia oficial de FAL:
-    // Instrucciones explicitas al sistema de razonamiento, no sugerencias
-    const basePrompt = input.prompt ?? `Take the person from the first image and replace their current clothing with the exact garment shown in the second image.
-
-Requirements:
-- The person MUST be wearing the garment from the second image in the output
-- Preserve the garment's exact colors, patterns, texture and design
-- Keep the person's face, hair, skin, body shape, pose and background unchanged
-- Apply realistic fit, draping and wrinkles as if physically wearing it
-- The output must be a single photorealistic photo
-
-Do NOT return the original person without clothing changes.`;
+    // Prompt corto y directo — Gemini responde mejor a instrucciones naturales y concisas
+    const basePrompt = input.prompt ?? `Make the person in the first photo wear the clothing item from the second photo. Keep the person's face, body, pose, and background exactly the same, only change the clothing.`;
 
     const model = 'fal-ai/nano-banana-2/edit';
     const MAX_ATTEMPTS = 2;
@@ -101,9 +91,8 @@ Do NOT return the original person without clothing changes.`;
           num_images: 1,
           output_format: 'jpeg',
           safety_tolerance: '4',
-          aspect_ratio: 'auto',
-          resolution: '0.5K',
-          limit_generations: true,
+          aspect_ratio: '3:4',
+          resolution: '1K',
           thinking_level: thinkingLevel,
           seed: attemptSeed,
         },
