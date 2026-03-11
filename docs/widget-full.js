@@ -139,10 +139,11 @@
     shadow.appendChild(wrapper);
 
     fab = document.createElement('button');
-    fab.innerHTML = `<svg width="44" height="44" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 10 L23.5 15 L28 16 L23.5 17 L22 22 L20.5 17 L16 16 L20.5 15 Z" fill="url(#g1)"/><path d="M13 18 L14 21 L17 22 L14 23 L13 26 L12 23 L9 22 L12 21 Z" fill="url(#g2)"/><path d="M15 10 L15.8 12.5 L18 13 L15.8 13.5 L15 16 L14.2 13.5 L12 13 L14.2 12.5 Z" fill="url(#g3)"/><defs><linearGradient id="g1" x1="16" y1="10" x2="28" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#FFE94B"/><stop offset="1" stop-color="#FFB800"/></linearGradient><linearGradient id="g2" x1="9" y1="18" x2="17" y2="26" gradientUnits="userSpaceOnUse"><stop stop-color="#FFD700"/><stop offset="1" stop-color="#FFA500"/></linearGradient><linearGradient id="g3" x1="12" y1="10" x2="18" y2="16" gradientUnits="userSpaceOnUse"><stop stop-color="#FFE94B"/><stop offset="1" stop-color="#FFD700"/></linearGradient></defs></svg>`;
-    fab.style.cssText = 'position: fixed; bottom: 24px; right: 24px; background: linear-gradient(135deg, #5b6ee8, #764ba2); color: white; border: none; border-radius: 50%; width: 51px; height: 51px; cursor: pointer; box-shadow: 0 4px 16px rgba(102,126,234,0.45); transition: transform 0.2s, box-shadow 0.2s; pointer-events: auto; display: flex; align-items: center; justify-content: center; padding: 0;';
-    fab.onmouseover = () => { fab.style.transform = 'scale(1.08)'; fab.style.boxShadow = '0 6px 24px rgba(102,126,234,0.6)'; };
-    fab.onmouseout = () => { fab.style.transform = 'scale(1)'; fab.style.boxShadow = '0 4px 16px rgba(102,126,234,0.45)'; };
+    // Dark circle with gold stars - elegant minimal design
+    fab.innerHTML = `<svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="28" r="28" fill="#1a1a1a"/><path d="M28 12 L30 20 L38 20 L32 25 L34 33 L28 28 L22 33 L24 25 L18 20 L26 20 Z" fill="url(#star)"/><defs><linearGradient id="star" x1="18" y1="12" x2="38" y2="33" gradientUnits="userSpaceOnUse"><stop stop-color="#D4AF37"/><stop offset="0.5" stop-color="#FFD700"/><stop offset="1" stop-color="#B8860B"/></linearGradient></defs></svg>`;
+    fab.style.cssText = 'position: fixed; bottom: 24px; right: 24px; background: transparent; border: none; border-radius: 50%; width: 56px; height: 56px; cursor: pointer; box-shadow: 0 4px 20px rgba(0,0,0,0.3); transition: transform 0.2s, box-shadow 0.2s; pointer-events: auto; display: flex; align-items: center; justify-content: center; padding: 0;';
+    fab.onmouseover = () => { fab.style.transform = 'scale(1.08)'; fab.style.boxShadow = '0 6px 28px rgba(0,0,0,0.5)'; };
+    fab.onmouseout = () => { fab.style.transform = 'scale(1)'; fab.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)'; };
     wrapper.appendChild(fab);
 
     overlay = document.createElement('div');
@@ -198,8 +199,8 @@
       }
 
       .tryon-upload-box:hover {
-        border-color: #667eea;
-        background: #f0f4ff;
+        border-color: #1a1a1a;
+        background: #f8f8f8;
         transform: translateY(-1px);
       }
 
@@ -292,8 +293,8 @@
       }
 
       .tryon-garment-box:hover {
-        border-color: #667eea;
-        background: #f0f4ff;
+        border-color: #1a1a1a;
+        background: #f8f8f8;
       }
 
       .tryon-garment-box.has-image {
@@ -312,10 +313,11 @@
       .tryon-submit-btn {
         width: 100%;
         height: 44px;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
+        background: #1a1a1a;
+        color: #FFD700;
         border: none;
         border-radius: 12px;
+        font-weight: 600;
         font-weight: 600;
         font-size: 14px;
         cursor: pointer;
@@ -353,7 +355,7 @@
         width: 120px;
         height: 120px;
         border-radius: 50%;
-        background: radial-gradient(circle, #ddd6fe 0%, #e0e7ff 100%);
+        background: radial-gradient(circle, #2a2a2a 0%, #1a1a1a 100%);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -417,7 +419,7 @@
 
       .tryon-progress-fill {
         height: 100%;
-        background: linear-gradient(90deg, #667eea, #764ba2);
+        background: linear-gradient(90deg, #D4AF37, #FFD700);
         border-radius: 999px;
         transition: width 0.5s ease;
       }
@@ -513,10 +515,11 @@
       .tryon-try-again-btn {
         width: 100%;
         height: 48px;
-        background: linear-gradient(135deg, #fbbf24, #f59e0b);
-        color: white;
+        background: #1a1a1a;
+        color: #FFD700;
         border: none;
         border-radius: 12px;
+        font-weight: 600;
         font-size: 14px;
         font-weight: 600;
         cursor: pointer;
@@ -579,8 +582,8 @@
       }
 
       .tryon-add-more:hover {
-        border-color: #667eea !important;
-        color: #667eea;
+        border-color: #1a1a1a !important;
+        color: #D4AF37;
       }
     `;
     container._shadowRoot.appendChild(style);
@@ -633,8 +636,8 @@
           <div style="font-size: 36px; margin-bottom: 6px; opacity: 0.5;">📷</div>
           <div style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 2px;">Upload your photo</div>
           <div style="font-size: 11px; color: #6b7280; margin-bottom: 10px;">Click or drag to upload</div>
-          <button id="open-camera-btn" style="background: white; border: 1.5px solid #e0e7ff; border-radius: 8px; padding: 6px 12px; font-size: 11px; font-weight: 600; color: #667eea; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.2s;" onclick="event.stopPropagation()">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <button id="open-camera-btn" style="background: white; border: 1.5px solid #1a1a1a; border-radius: 8px; padding: 6px 12px; font-size: 11px; font-weight: 600; color: #1a1a1a; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.2s;" onclick="event.stopPropagation()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
             Use Camera
           </button>
         </div>
@@ -655,7 +658,7 @@
 
       <!-- Footer -->
       <div style="padding: 12px ${layoutConfig.horizontalPadding}px; flex-shrink: 0; border-top: 1px solid #e5e7eb; box-sizing: border-box;">
-        <button id="submit-btn" style="width: 100%; height: 44px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 15px; cursor: pointer; transition: transform 0.2s, opacity 0.2s; display: flex; align-items: center; justify-content: center;" disabled>Try Look</button>
+        <button id="submit-btn" style="width: 100%; height: 44px; background: #1a1a1a; color: #FFD700; border: none; border-radius: 10px; font-weight: 600; font-size: 15px; cursor: pointer; transition: transform 0.2s, opacity 0.2s; display: flex; align-items: center; justify-content: center;" disabled>Try Look</button>
       </div>
     `;
 
@@ -681,8 +684,8 @@
       const cameraBtnEl = shadowQuerySelector('#open-camera-btn');
       if (cameraBtnEl) {
         cameraBtnEl.onclick = (e) => { e.stopPropagation(); openCamera(); };
-        cameraBtnEl.onmouseover = () => { cameraBtnEl.style.background = '#f0f4ff'; cameraBtnEl.style.borderColor = '#667eea'; };
-        cameraBtnEl.onmouseout = () => { cameraBtnEl.style.background = 'white'; cameraBtnEl.style.borderColor = '#e0e7ff'; };
+        cameraBtnEl.onmouseover = () => { cameraBtnEl.style.background = '#f5f5f5'; cameraBtnEl.style.borderColor = '#D4AF37'; };
+        cameraBtnEl.onmouseout = () => { cameraBtnEl.style.background = 'white'; cameraBtnEl.style.borderColor = '#1a1a1a'; };
       }
     }
 
@@ -812,7 +815,7 @@
     var captureBtn = document.createElement('button');
     captureBtn.style.cssText = 'background:white;border:none;border-radius:50%;width:68px;height:68px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,0.4);transition:transform 0.15s,opacity 0.2s;padding:0;';
     var inner = document.createElement('div');
-    inner.style.cssText = 'width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);';
+    inner.style.cssText = 'width:52px;height:52px;border-radius:50%;background:#1a1a1a;border:2px solid #D4AF37;';
     captureBtn.appendChild(inner);
     bottomWrap.appendChild(captureBtn);
 
@@ -934,20 +937,20 @@
   }
 
   function addDragDrop(element, type, index) {
-    element.addEventListener('dragenter', function(e) {
-      e.preventDefault(); e.stopPropagation();
-      element.style.borderColor = '#667eea';
-      element.style.background = '#f0f4ff';
-      element.style.transform = 'translateY(-1px)';
-    }, false);
+      element.addEventListener('dragenter', function(e) {
+        e.preventDefault(); e.stopPropagation();
+        element.style.borderColor = '#1a1a1a';
+        element.style.background = '#f8f8f8';
+        element.style.transform = 'translateY(-1px)';
+      }, false);
 
     element.addEventListener('dragover', function(e) {
-      e.preventDefault(); e.stopPropagation();
-      e.dataTransfer.dropEffect = 'copy';
-      element.style.borderColor = '#667eea';
-      element.style.background = '#f0f4ff';
-      element.style.transform = 'translateY(-1px)';
-    }, false);
+        e.preventDefault(); e.stopPropagation();
+        e.dataTransfer.dropEffect = 'copy';
+        element.style.borderColor = '#1a1a1a';
+        element.style.background = '#f8f8f8';
+        element.style.transform = 'translateY(-1px)';
+      }, false);
 
     element.addEventListener('dragleave', function(e) {
       e.preventDefault(); e.stopPropagation();
@@ -1174,7 +1177,7 @@
     const emoji = phase.emoji || '✨';
     const phaseIndex = state.currentLoadingPhase;
     const dots = Array.from({length: 4}, (_, i) =>
-      `<div style="width:8px;height:8px;border-radius:50%;background:${i === phaseIndex ? 'linear-gradient(135deg,#667eea,#764ba2)' : '#e5e7eb'};transition:background 0.4s;"></div>`
+      `<div style="width:8px;height:8px;border-radius:50%;background:${i === phaseIndex ? 'linear-gradient(135deg,#D4AF37,#FFD700)' : '#e5e7eb'};transition:background 0.4s;"></div>`
     ).join('');
     loadingOverlay.innerHTML = `
       <div class="tryon-loading-content" style="gap:0;">
