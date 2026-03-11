@@ -13,6 +13,8 @@ export interface AuthResult {
   valid: boolean;
   client: (Client & { allowedDomains?: AllowedDomain[] }) | null;
   error?: string;
+  statusCode?: number;
+  reason?: "INVALID_API_KEY" | "CLIENT_DISABLED" | "DB_UNAVAILABLE";
 }
 
 /**
@@ -21,7 +23,13 @@ export interface AuthResult {
  */
 export async function validateApiKey(apiKey: string): Promise<AuthResult> {
   if (!apiKey || typeof apiKey !== "string") {
-    return { valid: false, client: null, error: "API key requerida" };
+    return {
+      valid: false,
+      client: null,
+      error: "API key requerida",
+      statusCode: 400,
+      reason: "INVALID_API_KEY",
+    };
   }
 
   try {
@@ -31,17 +39,35 @@ export async function validateApiKey(apiKey: string): Promise<AuthResult> {
     });
 
     if (!client) {
-      return { valid: false, client: null, error: "API key inválida" };
+      return {
+        valid: false,
+        client: null,
+        error: "API key inválida",
+        statusCode: 401,
+        reason: "INVALID_API_KEY",
+      };
     }
 
     if (!client.active) {
-      return { valid: false, client: null, error: "Cliente desactivado" };
+      return {
+        valid: false,
+        client: null,
+        error: "Cliente desactivado",
+        statusCode: 403,
+        reason: "CLIENT_DISABLED",
+      };
     }
 
     return { valid: true, client };
   } catch (error) {
     console.error("[auth] Error validando API key:", error);
-    return { valid: false, client: null, error: "Error interno de autenticación" };
+    return {
+      valid: false,
+      client: null,
+      error: "No se pudo validar la API key porque la base de datos no responde",
+      statusCode: 503,
+      reason: "DB_UNAVAILABLE",
+    };
   }
 }
 

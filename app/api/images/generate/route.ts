@@ -34,6 +34,27 @@ export async function POST(request: NextRequest) {
   // #endregion
 
   try {
+    if (!process.env.DATABASE_URL) {
+      return corsJson(
+        {
+          success: false,
+          error:
+            "Configuración incompleta: falta DATABASE_URL en .env.local",
+        },
+        500
+      );
+    }
+
+    if (!process.env.FAL_KEY) {
+      return corsJson(
+        {
+          success: false,
+          error: "Configuración incompleta: falta FAL_KEY en .env.local",
+        },
+        500
+      );
+    }
+
     console.log(`[${requestId}] Processing generation request`);
 
     // Parse request body
@@ -85,7 +106,7 @@ export async function POST(request: NextRequest) {
     if (!authResult.valid || !authResult.client) {
       return corsJson(
         { success: false, error: authResult.error || "API key inválida" },
-        401
+        authResult.statusCode ?? 401
       );
     }
 

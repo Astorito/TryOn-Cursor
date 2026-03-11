@@ -46,6 +46,17 @@ export async function GET() {
 // ─── POST /api/clients ───
 export async function POST(request: NextRequest) {
   try {
+    if (!process.env.DATABASE_URL) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Falta configurar DATABASE_URL. Creá .env.local en la raíz con tu conexión PostgreSQL/Supabase.",
+        },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json();
     const { name, email, limit: clientLimit, domains } = body;
 
@@ -94,7 +105,9 @@ export async function POST(request: NextRequest) {
     const prismaCode = (error as Error & { code?: string })?.code;
     const isDbUnreachable =
       errName === "PrismaClientInitializationError" ||
-      /Can't reach database server|connection refused|ECONNREFUSED/i.test(errMessage);
+      /Can't reach database server|connection refused|ECONNREFUSED|Tenant or user not found|password authentication failed|authentication failed/i.test(
+        errMessage
+      );
     const isTableMissing = prismaCode === "P2021" || /does not exist in the current database/i.test(errMessage);
     let userMessage = "Error al crear cliente";
     if (isDbUnreachable)
