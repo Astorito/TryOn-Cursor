@@ -838,7 +838,7 @@
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
       canvas.getContext('2d').drawImage(video, 0, 0);
-      var dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.95);
       closeModal();
       state.userImage = dataUrl;
       state.userImageFile = null;
@@ -907,9 +907,9 @@
     const reader = new FileReader();
     reader.onload = function(e) {
       const base64 = e.target.result;
-      // Nano Banana Pro works well at 800px — smaller = faster upload
-      var maxDim = (type === 'user') ? 800 : 800;
-      var qual   = (type === 'user') ? 0.88 : 0.88;
+      // Nano Banana 2 necesita buena calidad de imagen para entender la tarea
+      var maxDim = (type === 'user') ? 1200 : 1200;
+      var qual   = (type === 'user') ? 0.95 : 0.95;
       compressImage(base64, maxDim, qual).then(function(compressedBase64) {
         if (type === 'user') {
           state.userImage = compressedBase64;

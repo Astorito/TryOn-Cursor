@@ -53,12 +53,17 @@ export class FalClient {
     if (!input.personImageUrl) throw new Error('personImageUrl es requerido');
     if (!input.garmentImageUrl) throw new Error('garmentImageUrl es requerido');
 
-    console.log('[FalClient] Subiendo imagenes...');
+    const personLen = input.personImageUrl.length;
+    const garmentLen = input.garmentImageUrl.length;
+    const personIsBase64 = input.personImageUrl.startsWith('data:');
+    const garmentIsBase64 = input.garmentImageUrl.startsWith('data:');
+    console.log(`[FalClient] Subiendo imagenes... person=${personIsBase64 ? 'base64' : 'url'}(${personLen}) garment=${garmentIsBase64 ? 'base64' : 'url'}(${garmentLen})`);
+
     const [personUrl, garmentUrl] = await Promise.all([
       this.uploadImage(input.personImageUrl),
       this.uploadImage(input.garmentImageUrl),
     ]);
-    console.log('[FalClient] Imagenes subidas');
+    console.log(`[FalClient] Imagenes subidas: person=${personUrl.substring(0, 80)} garment=${garmentUrl.substring(0, 80)}`);
 
     const inputUrls = [personUrl, garmentUrl];
 
