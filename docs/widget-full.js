@@ -907,35 +907,28 @@
     const reader = new FileReader();
     reader.onload = function(e) {
       const base64 = e.target.result;
-      // Nano Banana 2 necesita buena calidad de imagen para entender la tarea
-      var maxDim = (type === 'user') ? 1200 : 1200;
-      var qual   = (type === 'user') ? 0.95 : 0.95;
-      compressImage(base64, maxDim, qual).then(function(compressedBase64) {
+
+      function applyImage(finalBase64) {
         if (type === 'user') {
-          state.userImage = compressedBase64;
+          state.userImage = finalBase64;
           state.userImageFile = file;
-          updateUserUploadBox(true, compressedBase64);
+          updateUserUploadBox(true, finalBase64);
         } else {
-          state.garments[index] = compressedBase64;
+          state.garments[index] = finalBase64;
           state.garmentFiles[index] = file;
-          updateGarmentBox(index, true, compressedBase64);
+          updateGarmentBox(index, true, finalBase64);
         }
-        // Pre-upload in background immediately
-        preUploadImage(compressedBase64, compressedBase64.substring(0, 100));
+        preUploadImage(finalBase64, finalBase64.substring(0, 100));
         updateSubmitButton();
-      }).catch(function(error) {
-        console.error('Error compressing image:', error);
-        if (type === 'user') {
-          state.userImage = base64;
-          state.userImageFile = file;
-          updateUserUploadBox(true, base64);
-        } else {
-          state.garments[index] = base64;
-          state.garmentFiles[index] = file;
-          updateGarmentBox(index, true, base64);
-        }
-        updateSubmitButton();
-      });
+      }
+
+      if (type === 'user') {
+        // Persona: comprimir moderado para no exceder limites de payload
+        compressImage(base64, 1200, 0.92).then(applyImage).catch(function() { applyImage(base64); });
+      } else {
+        // Garment: NO comprimir — enviar original para que el modelo vea todos los detalles
+        applyImage(base64);
+      }
     };
     reader.readAsDataURL(file);
   }
