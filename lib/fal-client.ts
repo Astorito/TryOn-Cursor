@@ -62,8 +62,8 @@ export class FalClient {
 
     const inputUrls = [personUrl, garmentUrl];
 
-    // Prompt corto y directo — Gemini responde mejor a instrucciones naturales y concisas
-    const basePrompt = input.prompt ?? `Make the person in the first photo wear the clothing item from the second photo. Keep the person's face, body, pose, and background exactly the same, only change the clothing.`;
+    // Mismo prompt que funciona en el playground de FAL
+    const basePrompt = input.prompt ?? `Put the garment on the model`;
 
     const model = 'fal-ai/nano-banana-2/edit';
     const MAX_ATTEMPTS = 2;
@@ -78,11 +78,7 @@ export class FalClient {
       const seed = input.seed ?? Math.floor(Math.random() * 1_000_000);
       const attemptSeed = attempt === 1 ? seed : Math.floor(Math.random() * 1_000_000);
 
-      // Intento 1: thinking_level "minimal" (rapido)
-      // Intento 2: thinking_level "high" (mas razonamiento si el primero fallo)
-      const thinkingLevel = attempt === 1 ? 'minimal' : 'high';
-
-      console.log(`[FalClient] Intento ${attempt}: seed=${attemptSeed}, thinking=${thinkingLevel}`);
+      console.log(`[FalClient] Intento ${attempt}: seed=${attemptSeed}`);
 
       const result = await fal.subscribe(model, {
         input: {
@@ -91,9 +87,8 @@ export class FalClient {
           num_images: 1,
           output_format: 'jpeg',
           safety_tolerance: '4',
-          aspect_ratio: '3:4',
+          aspect_ratio: 'auto',
           resolution: '1K',
-          thinking_level: thinkingLevel,
           seed: attemptSeed,
         },
         logs: true,
