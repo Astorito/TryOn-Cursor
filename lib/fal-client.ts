@@ -7,7 +7,6 @@ export interface FalGenerationResult {
 export interface FalGenerationInput {
   personImageUrl: string
   garmentImageUrl: string
-  category?: 'tops' | 'bottoms' | 'one-pieces'
   prompt?: string
   seed?: number
 }
@@ -15,7 +14,7 @@ export interface FalGenerationInput {
 /**
  * Cliente para interactuar con FAL AI.
  * Modelo: fal-ai/nano-banana-2/edit
- * Multi-image editor — recibe [persona, prenda] y genera el try-on.
+ * Optimizado para virtual try-on rapido y confiable.
  */
 export class FalClient {
   private apiKey?: string;
@@ -40,8 +39,7 @@ export class FalClient {
   }
 
   /**
-   * Verifica que el resultado no sea una de las imágenes de entrada sin modificar.
-   * Compara la URL resultante contra las URLs de entrada (misma URL = sin cambios).
+   * Verifica que el resultado no sea una de las imagenes de entrada sin modificar.
    */
   private isUnchanged(resultUrl: string, inputUrls: string[]): boolean {
     return inputUrls.some(u => u === resultUrl);
@@ -55,40 +53,30 @@ export class FalClient {
     if (!input.personImageUrl) throw new Error('personImageUrl es requerido');
     if (!input.garmentImageUrl) throw new Error('garmentImageUrl es requerido');
 
-    console.log('[FalClient] Subiendo imágenes...');
+    console.log('[FalClient] Subiendo imagenes...');
     const [personUrl, garmentUrl] = await Promise.all([
       this.uploadImage(input.personImageUrl),
       this.uploadImage(input.garmentImageUrl),
     ]);
-    console.log('[FalClient] Imágenes subidas:', { personUrl: personUrl.slice(0, 60), garmentUrl: garmentUrl.slice(0, 60) });
+    console.log('[FalClient] Imagenes subidas');
 
     const inputUrls = [personUrl, garmentUrl];
 
-    // Prompt optimizado para nano-banana-2:
-    // - Identifica explícitamente IMAGE 1 e IMAGE 2
-    // - Ordena reemplazar, no sugerir
-    // - Prohíbe explícitamente devolver la imagen sin cambios
-    const prompt = input.prompt ?? `
-You are performing a virtual clothing try-on task using two images.
-IMAGE 1 is a photo of a PERSON.
-IMAGE 2 is a GARMENT (clothing item, flat lay or product photo).
+    // Prompt optimizado segun guia oficial de FAL:
+    // Instrucciones explicitas al sistema de razonamiento, no sugerencias
+    const basePrompt = input.prompt ?? `Take the person from the first image and replace their current clothing with the exact garment shown in the second image.
 
-YOUR TASK:
-- Remove the clothing the person is currently wearing
-- Dress the person in the EXACT garment shown in IMAGE 2
-- The garment must visibly and clearly replace the current clothing on the person's body
-- Preserve the garment's colors, patterns, logos, and texture exactly as shown in IMAGE 2
-- Maintain the person's face, hair, skin tone, body shape, pose, and background UNCHANGED
-- Apply realistic draping, wrinkles, and fit as if the person is actually wearing it
-- Output a single photorealistic image of the person wearing the garment from IMAGE 2
+Requirements:
+- The person MUST be wearing the garment from the second image in the output
+- Preserve the garment's exact colors, patterns, texture and design
+- Keep the person's face, hair, skin, body shape, pose and background unchanged
+- Apply realistic fit, draping and wrinkles as if physically wearing it
+- The output must be a single photorealistic photo
 
-CRITICAL: Do NOT output the original person unchanged. Do NOT output the garment alone. The output MUST be the person wearing the garment from IMAGE 2.
-    `.trim();
+Do NOT return the original person without clothing changes.`;
 
     const model = 'fal-ai/nano-banana-2/edit';
-    const seed = input.seed ?? Math.floor(Math.random() * 1_000_000);
-
-    console.log('[FalClient] Llamando modelo:', model, '| seed:', seed);
+    const MAX_ATTEMPTS = 2;
 
     type FalResponse = {
       data?: { images?: Array<{ url: string }> };
@@ -96,20 +84,27 @@ CRITICAL: Do NOT output the original person unchanged. Do NOT output the garment
       image?: { url: string };
     };
 
-    const MAX_ATTEMPTS = 2;
-
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      const seed = input.seed ?? Math.floor(Math.random() * 1_000_000);
       const attemptSeed = attempt === 1 ? seed : Math.floor(Math.random() * 1_000_000);
+
+      // Intento 1: thinking_level "minimal" (rapido)
+      // Intento 2: thinking_level "high" (mas razonamiento si el primero fallo)
+      const thinkingLevel = attempt === 1 ? 'minimal' : 'high';
+
+      console.log(`[FalClient] Intento ${attempt}: seed=${attemptSeed}, thinking=${thinkingLevel}`);
 
       const result = await fal.subscribe(model, {
         input: {
-          prompt,
+          prompt: basePrompt,
           image_urls: [personUrl, garmentUrl],
           num_images: 1,
           output_format: 'jpeg',
           safety_tolerance: '4',
-          aspect_ratio: '3:4',
-          resolution: '1K',
+          aspect_ratio: 'auto',
+          resolution: '0.5K',
+          limit_generations: true,
+          thinking_level: thinkingLevel,
           seed: attemptSeed,
         },
         logs: true,
@@ -120,35 +115,31 @@ CRITICAL: Do NOT output the original person unchanged. Do NOT output the garment
         },
       }) as FalResponse;
 
-      console.log('[FalClient] Respuesta (intento', attempt, '):', JSON.stringify(result).substring(0, 300));
-
       const imageUrl =
         result?.data?.images?.[0]?.url ??
         result?.images?.[0]?.url ??
         result?.image?.url;
 
       if (!imageUrl) {
-        if (attempt < MAX_ATTEMPTS) {
-          console.warn('[FalClient] Sin URL en respuesta, reintentando...');
-          continue;
-        }
-        console.error('[FalClient] Sin URL en respuesta final:', result);
-        throw new Error('FAL AI no devolvió una imagen válida');
+        console.warn(`[FalClient] Intento ${attempt}: sin URL en respuesta`);
+        if (attempt < MAX_ATTEMPTS) continue;
+        throw new Error('FAL AI no devolvio una imagen valida');
       }
 
-      // Validar que no sea una imagen de entrada sin modificar
+      // Validar que no sea la imagen original sin cambios
       if (this.isUnchanged(imageUrl, inputUrls)) {
+        console.warn(`[FalClient] Intento ${attempt}: imagen sin cambios detectada`);
         if (attempt < MAX_ATTEMPTS) {
-          console.warn('[FalClient] Imagen sin cambios detectada (misma URL), reintentando con seed diferente...');
+          console.log('[FalClient] Reintentando con thinking_level high...');
           continue;
         }
-        throw new Error('FAL AI devolvió la imagen original sin aplicar el garment. Intentá con una imagen diferente.');
+        throw new Error('No se pudo aplicar la prenda. Intenta con otra imagen.');
       }
 
-      console.log('[FalClient] URL generada (intento', attempt, '):', imageUrl);
+      console.log(`[FalClient] Exito en intento ${attempt}`);
       return { imageUrl };
     }
 
-    throw new Error('FAL AI no pudo generar una imagen modificada después de varios intentos.');
+    throw new Error('FAL AI no pudo generar la imagen despues de varios intentos.');
   }
 }
