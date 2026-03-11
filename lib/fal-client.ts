@@ -14,7 +14,8 @@ export interface FalGenerationInput {
 
 /**
  * Cliente para interactuar con FAL AI.
- * Usa fal-ai/fashn/tryon — modelo dedicado de virtual try-on.
+ * Modelo: fal-ai/nano-banana-2/edit
+ * Multi-image editor — recibe [persona, prenda] y genera el try-on.
  */
 export class FalClient {
   private apiKey?: string;
@@ -23,10 +24,6 @@ export class FalClient {
     this.apiKey = apiKey || process.env.FAL_KEY;
   }
 
-  /**
-   * Sube una imagen base64 a FAL.ai storage y devuelve una URL pública.
-   * Si ya es una URL (http/https), la devuelve sin cambios.
-   */
   private async uploadImage(base64OrUrl: string): Promise<string> {
     if (!base64OrUrl.startsWith('data:')) return base64OrUrl;
 
@@ -39,8 +36,15 @@ export class FalClient {
     const ext = mimeType.split('/')[1] || 'jpg';
     const file = new File([buffer], `image.${ext}`, { type: mimeType });
 
-    const uploadedUrl = await fal.storage.upload(file);
-    return uploadedUrl;
+    return await fal.storage.upload(file);
+  }
+
+  /**
+   * Verifica que el resultado no sea una de las imágenes de entrada sin modificar.
+   * Compara la URL resultante contra las URLs de entrada (misma URL = sin cambios).
+   */
+  private isUnchanged(resultUrl: string, inputUrls: string[]): boolean {
+    return inputUrls.some(u => u === resultUrl);
   }
 
   async generate(input: FalGenerationInput): Promise<FalGenerationResult> {
@@ -56,48 +60,95 @@ export class FalClient {
       this.uploadImage(input.personImageUrl),
       this.uploadImage(input.garmentImageUrl),
     ]);
-    console.log('[FalClient] Imágenes subidas OK');
+    console.log('[FalClient] Imágenes subidas:', { personUrl: personUrl.slice(0, 60), garmentUrl: garmentUrl.slice(0, 60) });
 
-    const model = 'fal-ai/fashn/tryon';
-    const category = input.category ?? 'tops';
+    const inputUrls = [personUrl, garmentUrl];
 
-    console.log('[FalClient] Llamando modelo:', model, '| category:', category);
+    // Prompt optimizado para nano-banana-2:
+    // - Identifica explícitamente IMAGE 1 e IMAGE 2
+    // - Ordena reemplazar, no sugerir
+    // - Prohíbe explícitamente devolver la imagen sin cambios
+    const prompt = input.prompt ?? `
+You are performing a virtual clothing try-on task using two images.
+IMAGE 1 is a photo of a PERSON.
+IMAGE 2 is a GARMENT (clothing item, flat lay or product photo).
+
+YOUR TASK:
+- Remove the clothing the person is currently wearing
+- Dress the person in the EXACT garment shown in IMAGE 2
+- The garment must visibly and clearly replace the current clothing on the person's body
+- Preserve the garment's colors, patterns, logos, and texture exactly as shown in IMAGE 2
+- Maintain the person's face, hair, skin tone, body shape, pose, and background UNCHANGED
+- Apply realistic draping, wrinkles, and fit as if the person is actually wearing it
+- Output a single photorealistic image of the person wearing the garment from IMAGE 2
+
+CRITICAL: Do NOT output the original person unchanged. Do NOT output the garment alone. The output MUST be the person wearing the garment from IMAGE 2.
+    `.trim();
+
+    const model = 'fal-ai/nano-banana-2/edit';
+    const seed = input.seed ?? Math.floor(Math.random() * 1_000_000);
+
+    console.log('[FalClient] Llamando modelo:', model, '| seed:', seed);
 
     type FalResponse = {
       data?: { images?: Array<{ url: string }> };
       images?: Array<{ url: string }>;
+      image?: { url: string };
     };
 
-    const result = await fal.subscribe(model, {
-      input: {
-        model_image_url: personUrl,
-        garment_image_url: garmentUrl,
-        category,
-        // Opciones de calidad
-        garment_photo_type: 'auto',
-        nsfw_filter: true,
-        ...(input.seed ? { seed: input.seed } : {}),
-      },
-      logs: true,
-      onQueueUpdate: (update) => {
-        if (update.status === 'IN_PROGRESS') {
-          update.logs?.forEach((log) => console.log('[FAL]', log.message));
+    const MAX_ATTEMPTS = 2;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      const attemptSeed = attempt === 1 ? seed : Math.floor(Math.random() * 1_000_000);
+
+      const result = await fal.subscribe(model, {
+        input: {
+          prompt,
+          image_urls: [personUrl, garmentUrl],
+          num_images: 1,
+          output_format: 'jpeg',
+          safety_tolerance: '4',
+          aspect_ratio: '3:4',
+          resolution: '1K',
+          seed: attemptSeed,
+        },
+        logs: true,
+        onQueueUpdate: (update) => {
+          if (update.status === 'IN_PROGRESS') {
+            update.logs?.forEach((log) => console.log('[FAL]', log.message));
+          }
+        },
+      }) as FalResponse;
+
+      console.log('[FalClient] Respuesta (intento', attempt, '):', JSON.stringify(result).substring(0, 300));
+
+      const imageUrl =
+        result?.data?.images?.[0]?.url ??
+        result?.images?.[0]?.url ??
+        result?.image?.url;
+
+      if (!imageUrl) {
+        if (attempt < MAX_ATTEMPTS) {
+          console.warn('[FalClient] Sin URL en respuesta, reintentando...');
+          continue;
         }
-      },
-    }) as FalResponse;
+        console.error('[FalClient] Sin URL en respuesta final:', result);
+        throw new Error('FAL AI no devolvió una imagen válida');
+      }
 
-    console.log('[FalClient] Respuesta:', JSON.stringify(result).substring(0, 300));
+      // Validar que no sea una imagen de entrada sin modificar
+      if (this.isUnchanged(imageUrl, inputUrls)) {
+        if (attempt < MAX_ATTEMPTS) {
+          console.warn('[FalClient] Imagen sin cambios detectada (misma URL), reintentando con seed diferente...');
+          continue;
+        }
+        throw new Error('FAL AI devolvió la imagen original sin aplicar el garment. Intentá con una imagen diferente.');
+      }
 
-    const imageUrl =
-      result?.data?.images?.[0]?.url ??
-      result?.images?.[0]?.url;
-
-    if (!imageUrl) {
-      console.error('[FalClient] Sin URL en respuesta:', result);
-      throw new Error('FAL AI no devolvió una imagen válida');
+      console.log('[FalClient] URL generada (intento', attempt, '):', imageUrl);
+      return { imageUrl };
     }
 
-    console.log('[FalClient] URL generada:', imageUrl);
-    return { imageUrl };
+    throw new Error('FAL AI no pudo generar una imagen modificada después de varios intentos.');
   }
 }

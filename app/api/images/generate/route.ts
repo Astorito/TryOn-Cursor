@@ -191,7 +191,6 @@ export async function POST(request: NextRequest) {
         falResult = await falClient.generate({
           personImageUrl: personImg,
           garmentImageUrl: topImg,
-          category: 'tops',
           seed: Math.floor(Math.random() * 1000000),
         });
         console.log(`[${requestId}] Done: ${falResult.imageUrl}`);
