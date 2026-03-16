@@ -30,8 +30,7 @@ export class FalClient {
     const buffer = Buffer.from(base64Data, 'base64');
     const blob = new Blob([buffer], { type: 'image/jpeg' });
     
-    const result = await fal.storage.upload(blob);
-    const url = typeof result === 'string' ? result : result.url;
+    const url = await fal.storage.upload(blob) as string;
     console.log(`[FalClient] Imagen subida a FAL storage: ${url}`);
     return url;
   }
