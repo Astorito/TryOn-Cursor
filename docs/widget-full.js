@@ -1063,32 +1063,15 @@
     state.isGenerating = true;
     const submitBtn = shadowQuerySelector('#submit-btn');
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Uploading images...';
+    submitBtn.textContent = 'Generating...';
 
     showLoading();
 
-    // Wait for pre-uploads to complete (max 3 seconds)
-    const maxWait = 3000;
-    const start = Date.now();
-    while (Date.now() - start < maxWait) {
-      const userKey = state.userImage ? state.userImage.substring(0, 100) : null;
-      const garmentsKeys = state.garments.filter(g => g !== null).map(g => g.substring(0, 100));
-
-      const pendingUser = userKey && state.uploadedUrls[userKey] === 'pending';
-      const pendingGarments = garmentsKeys.some(k => state.uploadedUrls[k] === 'pending');
-
-      if (!pendingUser && !pendingGarments) break;
-      await new Promise(r => setTimeout(r, 100));
-    }
-
-    // Update button text for generation phase
-    submitBtn.textContent = 'Generating...';
-
-    // Use pre-uploaded URLs if available, or fallback to compressed base64
-    const userImagePayload = getImageUrl(state.userImage);
-    const garmentsPayload = state.garments.filter(g => g !== null).map(g => getImageUrl(g));
-    const usingCache = userImagePayload.startsWith('http') || garmentsPayload.some(g => g.startsWith('http'));
-    console.log('[TryOn] Generate - using cached URLs:', usingCache, '- payload size:', Math.round(JSON.stringify({userImage: userImagePayload, garments: garmentsPayload}).length / 1024) + 'KB');
+    // Enviar imagenes comprimidas en base64 directamente
+    // El backend se encarga de subirlas a FAL storage antes de llamar al modelo
+    const userImagePayload = state.userImage;
+    const garmentsPayload = state.garments.filter(g => g !== null);
+    console.log('[TryOn] Generate - enviando imagenes al backend para procesar');
 
     fetch(BACKEND_URL + '/api/images/generate', {
       method: 'POST',
