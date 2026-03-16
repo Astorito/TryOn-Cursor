@@ -25,11 +25,12 @@ export class FalClient {
       return imageData;
     }
     
-    // Convertir base64 a buffer y subir
+    // Convertir base64 a Uint8Array (compatible con fal.storage.upload)
     const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
+    const uint8Array = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
     
-    const result = await fal.storage.upload(buffer);
+    const result = await fal.storage.upload(uint8Array);
     console.log(`[FalClient] Imagen subida a FAL storage: ${result.url}`);
     return result.url;
   }
