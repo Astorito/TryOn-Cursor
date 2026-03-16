@@ -34,7 +34,7 @@ export class FalClient {
     console.log(`[FalClient] person=${personImg.startsWith('data:') ? 'base64' : 'url'}(${personImg.length}) garment=${garmentImg.startsWith('data:') ? 'base64' : 'url'}(${garmentImg.length})`);
 
     const model = 'fal-ai/nano-banana-2/edit';
-    const prompt = input.prompt ?? 'Put the garment on the model';
+    const prompt = input.prompt ?? 'Take the clothing item from the second image and put it on the person in the first image. Return ONLY the person wearing the new garment. Keep the same pose, background, and facial features. The garment must be clearly visible and properly fitted on the person.';
     const seed = input.seed ?? Math.floor(Math.random() * 1_000_000);
 
     console.log(`[FalClient] Llamando ${model} | seed=${seed}`);
