@@ -31,8 +31,9 @@ export class FalClient {
     const blob = new Blob([buffer], { type: 'image/jpeg' });
     
     const result = await fal.storage.upload(blob);
-    console.log(`[FalClient] Imagen subida a FAL storage: ${result.url}`);
-    return result.url;
+    const url = typeof result === 'string' ? result : result.url;
+    console.log(`[FalClient] Imagen subida a FAL storage: ${url}`);
+    return url;
   }
 
   async generate(input: FalGenerationInput): Promise<FalGenerationResult> {
