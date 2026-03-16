@@ -923,11 +923,11 @@
       }
 
       if (type === 'user') {
-        // Persona: comprimir moderado para no exceder limites de payload
-        compressImage(base64, 1200, 0.92).then(applyImage).catch(function() { applyImage(base64); });
+        // Persona: comprimir a 1024px para no exceder limites de payload (~1MB max)
+        compressImage(base64, 1024, 0.90).then(applyImage).catch(function() { applyImage(base64); });
       } else {
-        // Garment: NO comprimir — enviar original para que el modelo vea todos los detalles
-        applyImage(base64);
+        // Garment: comprimir a 1024px con alta calidad para buen detalle sin exceder payload
+        compressImage(base64, 1024, 0.95).then(applyImage).catch(function() { applyImage(base64); });
       }
     };
     reader.readAsDataURL(file);
@@ -1057,21 +1057,38 @@
     }
   }
 
-  function generateTryOn() {
+  async function generateTryOn() {
     if (state.isGenerating) return;
 
     state.isGenerating = true;
     const submitBtn = shadowQuerySelector('#submit-btn');
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Generating...';
+    submitBtn.textContent = 'Uploading images...';
 
     showLoading();
 
-    // Use pre-uploaded URLs if available (faster) or fallback to base64
+    // Wait for pre-uploads to complete (max 3 seconds)
+    const maxWait = 3000;
+    const start = Date.now();
+    while (Date.now() - start < maxWait) {
+      const userKey = state.userImage ? state.userImage.substring(0, 100) : null;
+      const garmentsKeys = state.garments.filter(g => g !== null).map(g => g.substring(0, 100));
+
+      const pendingUser = userKey && state.uploadedUrls[userKey] === 'pending';
+      const pendingGarments = garmentsKeys.some(k => state.uploadedUrls[k] === 'pending');
+
+      if (!pendingUser && !pendingGarments) break;
+      await new Promise(r => setTimeout(r, 100));
+    }
+
+    // Update button text for generation phase
+    submitBtn.textContent = 'Generating...';
+
+    // Use pre-uploaded URLs if available, or fallback to compressed base64
     const userImagePayload = getImageUrl(state.userImage);
     const garmentsPayload = state.garments.filter(g => g !== null).map(g => getImageUrl(g));
     const usingCache = userImagePayload.startsWith('http') || garmentsPayload.some(g => g.startsWith('http'));
-    console.log('[TryOn] Generate - using cached URLs:', usingCache);
+    console.log('[TryOn] Generate - using cached URLs:', usingCache, '- payload size:', Math.round(JSON.stringify({userImage: userImagePayload, garments: garmentsPayload}).length / 1024) + 'KB');
 
     fetch(BACKEND_URL + '/api/images/generate', {
       method: 'POST',
