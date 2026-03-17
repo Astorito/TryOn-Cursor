@@ -73,7 +73,8 @@ export class FalClient {
         output_format: 'jpeg',
         safety_tolerance: '4',
         aspect_ratio: 'auto',
-        resolution: '1K',
+        resolution: '0.5K', // Más rápido que 1K (512px vs 1024px)
+        limit_generations: true, // Reduce iteraciones internas = más rápido
         seed,
       },
       logs: true,
