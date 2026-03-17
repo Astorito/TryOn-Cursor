@@ -425,6 +425,7 @@
       .tryon-result-image-container {
         position: relative;
         width: 100%;
+        min-height: 60vh;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -433,7 +434,7 @@
 
       .tryon-result-image {
         width: 100%;
-        max-height: calc(100vh - 300px);
+        max-height: calc(100vh - 180px);
         object-fit: contain;
         border-radius: 12px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.08);
@@ -473,9 +474,10 @@
       }
 
       .tryon-images-used {
-        margin-top: 16px;
-        padding-top: 16px;
+        margin-top: 8px;
+        padding-top: 12px;
         border-top: 1px solid #e5e7eb;
+        flex-shrink: 0;
       }
 
       .tryon-images-used-label {
@@ -484,7 +486,7 @@
         text-transform: uppercase;
         letter-spacing: 0.1em;
         color: #94a3b8;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
         text-align: center;
       }
 
@@ -492,7 +494,7 @@
         display: flex;
         justify-content: center;
         gap: 8px;
-        margin-bottom: 16px;
+        margin-bottom: 12px;
       }
 
       .tryon-thumbnail {
@@ -1230,7 +1232,7 @@
     panel.innerHTML = `
       <button class="tryon-close-btn close-result-btn">×</button>
       <div style="height: 100%; display: flex; flex-direction: column;">
-        <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px 24px 0 24px; overflow: hidden;">
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 8px 12px 0 12px; overflow: hidden;">
           <div class="tryon-result-image-container">
             <img src="${proxiedResultUrl}" alt="Try-on result" class="tryon-result-image" crossorigin="anonymous" />
           </div>
@@ -1245,7 +1247,7 @@
           </div>
         </div>
 
-        <div style="padding: 12px 24px;">
+        <div style="padding: 8px 16px 12px 16px;">
           <button class="tryon-try-again-btn reset-btn">Try another look</button>
         </div>
       </div>
