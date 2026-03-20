@@ -53,12 +53,12 @@
     };
   }
 
-  // Loading phases — FIX: added description to every phase
+  // Loading phases
   const loadingPhases = [
-    { text: 'Scanning your look',     emoji: '👀', description: 'Analyzing your photo...', duration: 4000 },
-    { text: 'Picking up the garment', emoji: '👕', description: 'Identifying fabric, color & fit...', duration: 5000 },
-    { text: 'Getting dressed',        emoji: '✨', description: 'AI is putting the outfit on you...', duration: 6000 },
-    { text: 'Almost ready',           emoji: '🪄', description: 'Adding final details...', duration: Infinity }
+    { text: 'Scanning your look',     description: 'Analyzing your photo...', duration: 4000 },
+    { text: 'Picking up the garment', description: 'Identifying fabric, color & fit...', duration: 5000 },
+    { text: 'Getting dressed',        description: 'AI is putting the outfit on you...', duration: 6000 },
+    { text: 'Almost ready',           description: 'Adding final details...', duration: Infinity }
   ];
 
   // Image compression
@@ -1174,14 +1174,12 @@
   function updateLoadingText() {
     const phase = loadingPhases[state.currentLoadingPhase];
     const description = phase.description || '';
-    const emoji = phase.emoji || '✨';
     const phaseIndex = state.currentLoadingPhase;
     const dots = Array.from({length: 4}, (_, i) =>
       `<div style="width:8px;height:8px;border-radius:50%;background:${i === phaseIndex ? 'linear-gradient(135deg,#667eea,#764ba2)' : '#e5e7eb'};transition:background 0.4s;"></div>`
     ).join('');
     loadingOverlay.innerHTML = `
       <div class="tryon-loading-content" style="gap:0;">
-        <div style="font-size:52px;margin-bottom:16px;animation:tryon-bounce 1.2s ease-in-out infinite;">${emoji}</div>
         <div class="tryon-loading-text" style="margin-bottom:6px;">${phase.text}</div>
         <div class="tryon-loading-desc" style="margin-bottom:24px;">${description}</div>
         <div style="display:flex;gap:8px;margin-bottom:28px;">${dots}</div>
