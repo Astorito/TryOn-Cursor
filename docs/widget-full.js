@@ -139,10 +139,11 @@
     shadow.appendChild(wrapper);
 
     fab = document.createElement('button');
-    fab.innerHTML = `<svg width="44" height="44" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 10 L23.5 15 L28 16 L23.5 17 L22 22 L20.5 17 L16 16 L20.5 15 Z" fill="url(#g1)"/><path d="M13 18 L14 21 L17 22 L14 23 L13 26 L12 23 L9 22 L12 21 Z" fill="url(#g2)"/><path d="M15 10 L15.8 12.5 L18 13 L15.8 13.5 L15 16 L14.2 13.5 L12 13 L14.2 12.5 Z" fill="url(#g3)"/><defs><linearGradient id="g1" x1="16" y1="10" x2="28" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#FFE94B"/><stop offset="1" stop-color="#FFB800"/></linearGradient><linearGradient id="g2" x1="9" y1="18" x2="17" y2="26" gradientUnits="userSpaceOnUse"><stop stop-color="#FFD700"/><stop offset="1" stop-color="#FFA500"/></linearGradient><linearGradient id="g3" x1="12" y1="10" x2="18" y2="16" gradientUnits="userSpaceOnUse"><stop stop-color="#FFE94B"/><stop offset="1" stop-color="#FFD700"/></linearGradient></defs></svg>`;
-    fab.style.cssText = 'position: fixed; bottom: 24px; right: 24px; background: linear-gradient(135deg, #5b6ee8, #764ba2); color: white; border: none; border-radius: 50%; width: 51px; height: 51px; cursor: pointer; box-shadow: 0 4px 16px rgba(102,126,234,0.45); transition: transform 0.2s, box-shadow 0.2s; pointer-events: auto; display: flex; align-items: center; justify-content: center; padding: 0;';
-    fab.onmouseover = () => { fab.style.transform = 'scale(1.08)'; fab.style.boxShadow = '0 6px 24px rgba(102,126,234,0.6)'; };
-    fab.onmouseout = () => { fab.style.transform = 'scale(1)'; fab.style.boxShadow = '0 4px 16px rgba(102,126,234,0.45)'; };
+    // Círculo negro con estrellas crema/off-white (diseño minimalista)
+    fab.innerHTML = `<svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="28" r="28" fill="#000"/><path d="M36 14 L38 22 L46 22 L39 27 L41 35 L36 30 L31 35 L33 27 L26 22 L34 22 Z" fill="#F5F0E6"/><path d="M18 26 L19.5 32 L25 32 L20 36 L21.5 42 L18 38 L14.5 42 L16 36 L11 32 L16.5 32 Z" fill="#F5F0E6"/><path d="M24 18 L25 22 L29 22 L26 25 L27 29 L24 26 L21 29 L22 25 L19 22 L23 22 Z" fill="#F5F0E6"/></svg>`;
+    fab.style.cssText = 'position: fixed; bottom: 24px; right: 24px; background: transparent; border: none; border-radius: 50%; width: 56px; height: 56px; cursor: pointer; box-shadow: 0 4px 20px rgba(0,0,0,0.35); transition: transform 0.2s, box-shadow 0.2s; pointer-events: auto; display: flex; align-items: center; justify-content: center; padding: 0;';
+    fab.onmouseover = () => { fab.style.transform = 'scale(1.08)'; fab.style.boxShadow = '0 6px 28px rgba(0,0,0,0.5)'; };
+    fab.onmouseout = () => { fab.style.transform = 'scale(1)'; fab.style.boxShadow = '0 4px 20px rgba(0,0,0,0.35)'; };
     wrapper.appendChild(fab);
 
     overlay = document.createElement('div');
