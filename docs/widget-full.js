@@ -25,6 +25,14 @@
   // DOM elements
   let container, fab, panel, overlay, loadingOverlay;
 
+  const TRYON_SVG = {
+    uploadCam: '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="1"/><circle cx="12" cy="13" r="3"/><path d="M8 6V4h8v2"/></svg>',
+    capture: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2F3C4F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>',
+    garment0: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3L3 8V21H21V8L18 3H6Z"/><path d="M3 8H21"/><path d="M16 11C16 13.2091 14.2091 15 12 15C9.79086 15 8 13.2091 8 11"/></svg>',
+    garment1: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4L12 2L4 4V7L12 9L20 7V4Z"/><path d="M12 9V22"/><path d="M4 7V18L12 22L20 18V7"/></svg>',
+    garment2: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L7 4L3 9L12 22L21 9L17 4L12 2Z"/><path d="M7 4L12 9L17 4"/><path d="M3 9H21"/></svg>'
+  };
+
   // Layout configuration
   const layoutConfig = {
     panelWidth: 320,
@@ -135,7 +143,7 @@
     var shadow = container.attachShadow({ mode: 'open' });
 
     var wrapper = document.createElement('div');
-    wrapper.style.cssText = 'all: initial; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;';
+    wrapper.style.cssText = 'all: initial; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;';
     shadow.appendChild(wrapper);
 
     fab = document.createElement('button');
@@ -151,7 +159,7 @@
     wrapper.appendChild(overlay);
 
     panel = document.createElement('div');
-    panel.style.cssText = 'position: fixed; bottom: 82px; right: 24px; width: ' + layoutConfig.panelWidth + 'px; height: ' + layoutConfig.panelTotalHeight + 'px; background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); display: none; overflow: hidden; flex-direction: column; transition: height 0.4s ease; pointer-events: auto;';
+    panel.style.cssText = 'position: fixed; bottom: 82px; right: 24px; width: ' + layoutConfig.panelWidth + 'px; height: ' + layoutConfig.panelTotalHeight + 'px; background: white; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 30px rgba(0,0,0,0.05); display: none; overflow: hidden; flex-direction: column; transition: height 0.4s ease; pointer-events: auto; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;';
     wrapper.appendChild(panel);
 
     loadingOverlay = document.createElement('div');
@@ -167,6 +175,18 @@
   function attachStyles() {
     const style = document.createElement('style');
     style.textContent = `
+      @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+      * {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+
+      .tryon-heading-serif {
+        font-family: 'Playfair Display', Georgia, serif;
+        font-weight: 600;
+        color: #2F3C4F;
+      }
+
       @keyframes pulse {
         0%, 100% { transform: scale(1); opacity: 1; }
         50% { transform: scale(1.05); opacity: 0.9; }
@@ -188,19 +208,19 @@
       }
 
       .tryon-upload-box {
-        border: 2px dashed #e0e7ff;
-        border-radius: 12px;
+        border: 1px dashed #E5E7EB;
+        border-radius: 6px;
         padding: 12px;
         text-align: center;
         cursor: pointer;
         transition: all 0.2s ease;
-        background: #f8fafc;
+        background: #F8F9FA;
         position: relative;
       }
 
       .tryon-upload-box:hover {
-        border-color: #667eea;
-        background: #f0f4ff;
+        border-color: #2F3C4F;
+        background: #F8F9FA;
         transform: translateY(-1px);
       }
 
@@ -251,22 +271,27 @@
       }
 
       .tryon-upload-text {
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 600;
-        color: #374151;
+        color: #2F3C4F;
         margin-bottom: 2px;
+        letter-spacing: 0.02em;
       }
 
       .tryon-upload-hint {
-        font-size: 11px;
-        color: #6b7280;
+        font-size: 9px;
+        font-weight: 700;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
       }
 
       .tryon-section-title {
-        font-size: 13px;
+        font-size: 16px;
         font-weight: 600;
-        color: #374151;
+        color: #2F3C4F;
         margin-bottom: 6px;
+        font-family: 'Playfair Display', Georgia, serif;
       }
 
       .tryon-garments-grid {
@@ -278,9 +303,9 @@
 
       .tryon-garment-box {
         aspect-ratio: 1;
-        border: 2px dashed #e0e7ff;
-        border-radius: 10px;
-        background: #f8fafc;
+        border: 1px solid #E5E7EB;
+        border-radius: 6px;
+        background: #F8F9FA;
         cursor: pointer;
         transition: all 0.2s ease;
         display: flex;
@@ -293,8 +318,8 @@
       }
 
       .tryon-garment-box:hover {
-        border-color: #667eea;
-        background: #f0f4ff;
+        border-color: #2F3C4F;
+        background: #F8F9FA;
       }
 
       .tryon-garment-box.has-image {
@@ -312,20 +337,24 @@
 
       .tryon-submit-btn {
         width: 100%;
-        height: 44px;
-        background: linear-gradient(135deg, #667eea, #764ba2);
+        height: 48px;
+        background: #2F3C4F;
         color: white;
         border: none;
-        border-radius: 12px;
-        font-weight: 600;
-        font-size: 14px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.25em;
         cursor: pointer;
-        transition: transform 0.2s;
+        transition: background 0.2s, transform 0.2s;
         margin-top: 0;
         flex-shrink: 0;
+        font-family: 'Inter', sans-serif;
       }
 
       .tryon-submit-btn:hover:not(:disabled) {
+        background: #000;
         transform: translateY(-1px);
       }
 
@@ -354,19 +383,20 @@
         width: 120px;
         height: 120px;
         border-radius: 50%;
-        background: radial-gradient(circle, #ddd6fe 0%, #e0e7ff 100%);
+        background: radial-gradient(circle, #e2e8f0 0%, #F8F9FA 100%);
         display: flex;
         align-items: center;
         justify-content: center;
         margin-bottom: 24px;
         animation: pulse 2s infinite;
-        box-shadow: 0 8px 24px rgba(102,126,234,0.15);
+        box-shadow: 0 8px 24px rgba(47,60,79,0.08);
       }
 
       .tryon-loading-text {
-        font-size: 24px;
-        font-weight: 700;
-        color: #1e293b;
+        font-family: 'Playfair Display', Georgia, serif;
+        font-size: 20px;
+        font-weight: 600;
+        color: #2F3C4F;
         margin-bottom: 8px;
         animation: fadeIn 0.5s ease;
       }
@@ -418,7 +448,7 @@
 
       .tryon-progress-fill {
         height: 100%;
-        background: linear-gradient(90deg, #667eea, #764ba2);
+        background: linear-gradient(90deg, #2F3C4F, #6D5ED2);
         border-radius: 999px;
         transition: width 0.5s ease;
       }
@@ -516,20 +546,24 @@
       .tryon-try-again-btn {
         width: 100%;
         height: 48px;
-        background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        background: #2F3C4F;
         color: white;
         border: none;
-        border-radius: 12px;
-        font-size: 14px;
-        font-weight: 600;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
         cursor: pointer;
         transition: all 0.2s;
-        box-shadow: 0 4px 12px rgba(251,191,36,0.2);
+        box-shadow: 0 4px 20px rgba(47,60,79,0.15);
+        font-family: 'Inter', sans-serif;
       }
 
       .tryon-try-again-btn:hover {
+        background: #000;
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(251,191,36,0.3);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
       }
 
       .tryon-loading-content {
@@ -582,8 +616,17 @@
       }
 
       .tryon-add-more:hover {
-        border-color: #667eea !important;
-        color: #667eea;
+        border-color: #2F3C4F !important;
+        color: #2F3C4F;
+      }
+
+      .tryon-close-panel-btn:hover {
+        color: #2F3C4F !important;
+      }
+
+      .tryon-capture-btn:hover {
+        background: #fff !important;
+        border-color: #2F3C4F !important;
       }
     `;
     container._shadowRoot.appendChild(style);
@@ -619,46 +662,62 @@
   function renderPanel() {
     const sizes = calculateBoxSizes();
 
+    const svgHouse = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2F3C4F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3L4 9v12h16V9l-8-6z"/><path d="M12 3v18"/></svg>';
+    const svgClose = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M6 6l12 12"/></svg>';
+
     panel.innerHTML = `
       <!-- Header -->
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px ${layoutConfig.horizontalPadding}px; flex-shrink: 0; border-bottom: 1px solid #e5e7eb; box-sizing: border-box;">
-        <span style="font-size: 13px; color: #6b7280; font-weight: 500; display: flex; align-items: center; gap: 4px;">
-          <svg width="16" height="16" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 10 L23.5 15 L28 16 L23.5 17 L22 22 L20.5 17 L16 16 L20.5 15 Z" fill="#FFD700"/><path d="M13 18 L14 21 L17 22 L14 23 L13 26 L12 23 L9 22 L12 21 Z" fill="#FFD700"/><path d="M15 10 L15.8 12.5 L18 13 L15.8 13.5 L15 16 L14.2 13.5 L12 13 L14.2 12.5 Z" fill="#FFD700"/></svg>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px ${layoutConfig.horizontalPadding}px; flex-shrink: 0; border-bottom: 1px solid #f3f4f6; box-sizing: border-box;">
+        <span style="font-size: 10px; color: #2F3C4F; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; display: flex; align-items: center; gap: 10px;">
+          ${svgHouse}
           trylook-ai.com
         </span>
-        <button class="close-panel-btn" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #6b7280; padding: 0; line-height: 1; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;" title="Close panel">×</button>
+        <button class="close-panel-btn tryon-close-panel-btn" style="background: none; border: none; cursor: pointer; color: #94a3b8; padding: 4px; line-height: 1; display: flex; align-items: center; justify-content: center; transition: color 0.2s;" title="Close panel" aria-label="Close">${svgClose}</button>
       </div>
 
       <!-- Content -->
-      <div style="flex: 1; display: flex; flex-direction: column; padding: ${layoutConfig.verticalGap}px ${layoutConfig.horizontalPadding}px; gap: ${layoutConfig.verticalGap}px; overflow: hidden; box-sizing: border-box;">
-        <div style="font-size: 12px; font-weight: 600; color: #374151; margin: 0; flex-shrink: 0;">Upload your photo</div>
-        <div id="user-upload" class="tryon-upload-box" style="width: ${sizes.userBoxWidth}px; height: ${sizes.userBoxHeight}px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;">
-          <div style="font-size: 36px; margin-bottom: 6px; opacity: 0.5;">📷</div>
-          <div style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 2px;">Upload your photo</div>
-          <div style="font-size: 11px; color: #6b7280; margin-bottom: 10px;">Click or drag to upload</div>
-          <button id="open-camera-btn" style="background: white; border: 1.5px solid #e0e7ff; border-radius: 8px; padding: 6px 12px; font-size: 11px; font-weight: 600; color: #667eea; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.2s;" onclick="event.stopPropagation()">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            Use Camera
-          </button>
-        </div>
+      <div style="flex: 1; display: flex; flex-direction: column; padding: 20px ${layoutConfig.horizontalPadding}px; gap: 20px; overflow: hidden; box-sizing: border-box;">
+        <section style="flex-shrink: 0;">
+          <h2 class="tryon-heading-serif" style="font-size: 16px; margin: 0 0 14px 0;">Upload your picture</h2>
+          <div id="user-upload" class="tryon-upload-box" style="width: ${sizes.userBoxWidth}px; height: ${sizes.userBoxHeight}px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;">
+            <div style="margin-bottom: 16px; color: #94a3b8;">${TRYON_SVG.uploadCam}</div>
+            <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: #2F3C4F; letter-spacing: 0.02em;">Upload a portrait</p>
+            <p style="margin: 0 0 20px 0; font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.15em;">Drag &amp; Drop or Browse</p>
+            <button id="open-camera-btn" class="tryon-capture-btn" style="background: white; border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px 22px; font-size: 10px; font-weight: 700; color: #2F3C4F; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;" onclick="event.stopPropagation()">
+              ${TRYON_SVG.capture}
+              Capture Live
+            </button>
+          </div>
+        </section>
 
-        <div style="font-size: 12px; font-weight: 600; color: #374151; margin: 0; flex-shrink: 0;">Add garments (up to 3)</div>
-        <div class="tryon-garments-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: ${layoutConfig.verticalGap}px; margin: 0; flex-shrink: 0;">
-          <div id="garment-0" class="tryon-garment-box" style="width: ${sizes.garmentBoxSize}px; height: ${sizes.garmentBoxSize}px; border: 2px dashed #e0e7ff; border-radius: 10px; background: #f8fafc; cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px; box-sizing: border-box;">
-            <div style="font-size: 28px;">👕</div>
+        <section style="flex-shrink: 0;">
+          <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 10px;">
+            <div>
+              <h2 class="tryon-heading-serif" style="font-size: 16px; margin: 0 0 4px 0;">Select Pieces</h2>
+              <p style="margin: 0; font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.12em;">Maximum three selections</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
+              <span style="width: 6px; height: 6px; background: #6D5ED2; border-radius: 50%; flex-shrink: 0;"></span>
+              <span style="font-size: 8px; font-weight: 700; color: #2F3C4F; text-transform: uppercase; letter-spacing: 0.1em;">AI Refined</span>
+            </div>
           </div>
-          <div id="garment-1" class="tryon-garment-box" style="width: ${sizes.garmentBoxSize}px; height: ${sizes.garmentBoxSize}px; border: 2px dashed #e0e7ff; border-radius: 10px; background: #f8fafc; cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px; box-sizing: border-box;">
-            <div style="font-size: 28px;">👔</div>
+          <div class="tryon-garments-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0; flex-shrink: 0;">
+            <div id="garment-0" class="tryon-garment-box" style="width: ${sizes.garmentBoxSize}px; height: ${sizes.garmentBoxSize}px; box-sizing: border-box;">
+              ${TRYON_SVG.garment0}
+            </div>
+            <div id="garment-1" class="tryon-garment-box" style="width: ${sizes.garmentBoxSize}px; height: ${sizes.garmentBoxSize}px; box-sizing: border-box;">
+              ${TRYON_SVG.garment1}
+            </div>
+            <div id="garment-2" class="tryon-garment-box" style="width: ${sizes.garmentBoxSize}px; height: ${sizes.garmentBoxSize}px; box-sizing: border-box;">
+              ${TRYON_SVG.garment2}
+            </div>
           </div>
-          <div id="garment-2" class="tryon-garment-box" style="width: ${sizes.garmentBoxSize}px; height: ${sizes.garmentBoxSize}px; border: 2px dashed #e0e7ff; border-radius: 10px; background: #f8fafc; cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px; box-sizing: border-box;">
-            <div style="font-size: 28px;">👗</div>
-          </div>
-        </div>
+        </section>
       </div>
 
       <!-- Footer -->
-      <div style="padding: 12px ${layoutConfig.horizontalPadding}px; flex-shrink: 0; border-top: 1px solid #e5e7eb; box-sizing: border-box;">
-        <button id="submit-btn" style="width: 100%; height: 44px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 15px; cursor: pointer; transition: transform 0.2s, opacity 0.2s; display: flex; align-items: center; justify-content: center;" disabled>Try Look</button>
+      <div style="padding: 20px ${layoutConfig.horizontalPadding}px; flex-shrink: 0; border-top: 1px solid #f3f4f6; box-sizing: border-box; background: white;">
+        <button id="submit-btn" class="tryon-submit-btn" style="width: 100%; height: 48px; display: flex; align-items: center; justify-content: center;" disabled>Try Look</button>
       </div>
     `;
 
@@ -684,8 +743,8 @@
       const cameraBtnEl = shadowQuerySelector('#open-camera-btn');
       if (cameraBtnEl) {
         cameraBtnEl.onclick = (e) => { e.stopPropagation(); openCamera(); };
-        cameraBtnEl.onmouseover = () => { cameraBtnEl.style.background = '#f0f4ff'; cameraBtnEl.style.borderColor = '#667eea'; };
-        cameraBtnEl.onmouseout = () => { cameraBtnEl.style.background = 'white'; cameraBtnEl.style.borderColor = '#e0e7ff'; };
+        cameraBtnEl.onmouseover = () => { cameraBtnEl.style.background = '#fff'; cameraBtnEl.style.borderColor = '#2F3C4F'; };
+        cameraBtnEl.onmouseout = () => { cameraBtnEl.style.background = 'white'; cameraBtnEl.style.borderColor = '#cbd5e1'; };
       }
     }
 
@@ -815,7 +874,7 @@
     var captureBtn = document.createElement('button');
     captureBtn.style.cssText = 'background:white;border:none;border-radius:50%;width:68px;height:68px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,0.4);transition:transform 0.15s,opacity 0.2s;padding:0;';
     var inner = document.createElement('div');
-    inner.style.cssText = 'width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);';
+    inner.style.cssText = 'width:52px;height:52px;border-radius:50%;background:#2F3C4F;border:2px solid #cbd5e1;';
     captureBtn.appendChild(inner);
     bottomWrap.appendChild(captureBtn);
 
@@ -938,31 +997,31 @@
 
   function addDragDrop(element, type, index) {
     element.addEventListener('dragenter', function(e) {
-      e.preventDefault(); e.stopPropagation();
-      element.style.borderColor = '#667eea';
-      element.style.background = '#f0f4ff';
-      element.style.transform = 'translateY(-1px)';
-    }, false);
+        e.preventDefault(); e.stopPropagation();
+        element.style.borderColor = '#2F3C4F';
+        element.style.background = '#F8F9FA';
+        element.style.transform = 'translateY(-1px)';
+      }, false);
 
     element.addEventListener('dragover', function(e) {
-      e.preventDefault(); e.stopPropagation();
-      e.dataTransfer.dropEffect = 'copy';
-      element.style.borderColor = '#667eea';
-      element.style.background = '#f0f4ff';
-      element.style.transform = 'translateY(-1px)';
-    }, false);
+        e.preventDefault(); e.stopPropagation();
+        e.dataTransfer.dropEffect = 'copy';
+        element.style.borderColor = '#2F3C4F';
+        element.style.background = '#F8F9FA';
+        element.style.transform = 'translateY(-1px)';
+      }, false);
 
     element.addEventListener('dragleave', function(e) {
       e.preventDefault(); e.stopPropagation();
-      element.style.borderColor = element.classList.contains('has-image') ? '#10b981' : '#e0e7ff';
-      element.style.background = element.classList.contains('has-image') ? '#f0fdf4' : '#f8fafc';
+      element.style.borderColor = element.classList.contains('has-image') ? '#10b981' : '#E5E7EB';
+      element.style.background = element.classList.contains('has-image') ? '#f0fdf4' : '#F8F9FA';
       element.style.transform = 'translateY(0)';
     }, false);
 
     element.addEventListener('drop', function(e) {
       e.preventDefault(); e.stopPropagation();
-      element.style.borderColor = element.classList.contains('has-image') ? '#10b981' : '#e0e7ff';
-      element.style.background = element.classList.contains('has-image') ? '#f0fdf4' : '#f8fafc';
+      element.style.borderColor = element.classList.contains('has-image') ? '#10b981' : '#E5E7EB';
+      element.style.background = element.classList.contains('has-image') ? '#f0fdf4' : '#F8F9FA';
       element.style.transform = 'translateY(0)';
       var file = e.dataTransfer.files[0];
       if (file) { handleFileFromDrop(file, type, index); }
@@ -1002,10 +1061,20 @@
       box.style.width = sizes.userBoxWidth + 'px';
       box.style.height = sizes.userBoxHeight + 'px';
       box.innerHTML = `
-        <div style="font-size: 40px; margin-bottom: 8px; opacity: 0.6;">📷</div>
-        <div style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 2px;">Upload your photo</div>
-        <div style="font-size: 11px; color: #6b7280;">Click or drag to upload</div>
+        <div style="margin-bottom: 16px; color: #94a3b8;">${TRYON_SVG.uploadCam}</div>
+        <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: #2F3C4F; letter-spacing: 0.02em;">Upload a portrait</p>
+        <p style="margin: 0 0 20px 0; font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.15em;">Drag &amp; Drop or Browse</p>
+        <button id="open-camera-btn" class="tryon-capture-btn" style="background: white; border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px 22px; font-size: 10px; font-weight: 700; color: #2F3C4F; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+          ${TRYON_SVG.capture}
+          Capture Live
+        </button>
       `;
+      const cameraBtnEl = box.querySelector('#open-camera-btn');
+      if (cameraBtnEl) {
+        cameraBtnEl.onclick = (e) => { e.stopPropagation(); openCamera(); };
+        cameraBtnEl.onmouseover = () => { cameraBtnEl.style.background = '#fff'; cameraBtnEl.style.borderColor = '#2F3C4F'; };
+        cameraBtnEl.onmouseout = () => { cameraBtnEl.style.background = 'white'; cameraBtnEl.style.borderColor = '#cbd5e1'; };
+      }
     }
   }
 
@@ -1034,11 +1103,11 @@
         };
       }
     } else {
-      const emojis = ['👕', '👔', '👗'];
+      const garmentSvgs = [TRYON_SVG.garment0, TRYON_SVG.garment1, TRYON_SVG.garment2];
       box.classList.remove('has-image');
       box.style.width = sizes.garmentBoxSize + 'px';
       box.style.height = sizes.garmentBoxSize + 'px';
-      box.innerHTML = `<div style="font-size: 28px;">${emojis[index]}</div>`;
+      box.innerHTML = garmentSvgs[index];
     }
   }
 
@@ -1176,7 +1245,7 @@
     const description = phase.description || '';
     const phaseIndex = state.currentLoadingPhase;
     const dots = Array.from({length: 4}, (_, i) =>
-      `<div style="width:8px;height:8px;border-radius:50%;background:${i === phaseIndex ? 'linear-gradient(135deg,#667eea,#764ba2)' : '#e5e7eb'};transition:background 0.4s;"></div>`
+      `<div style="width:8px;height:8px;border-radius:50%;background:${i === phaseIndex ? 'linear-gradient(135deg,#2F3C4F,#6D5ED2)' : '#e5e7eb'};transition:background 0.4s;"></div>`
     ).join('');
     loadingOverlay.innerHTML = `
       <div class="tryon-loading-content" style="gap:0;">
@@ -1323,11 +1392,10 @@
 
   function showError(message) {
     panel.innerHTML = `
-      <div style="padding: 24px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
-        <div style="font-size: 48px; margin-bottom: 16px;">❌</div>
-        <h3 style="font-size: 20px; font-weight: 600; color: #1e293b; margin-bottom: 8px;">Something went wrong</h3>
-        <p style="color: #64748b; margin-bottom: 24px;">${message}</p>
-        <button class="error-reset-btn" style="padding: 12px 24px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">Try Again</button>
+      <div style="padding: 24px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-family: Inter, sans-serif;">
+        <h3 style="font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 600; color: #2F3C4F; margin-bottom: 8px;">Something went wrong</h3>
+        <p style="color: #94a3b8; margin-bottom: 24px; font-size: 14px;">${message}</p>
+        <button class="error-reset-btn tryon-submit-btn" style="width: auto; min-width: 200px; padding: 14px 28px;">Try Again</button>
       </div>
     `;
 
