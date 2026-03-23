@@ -1123,10 +1123,10 @@
   }
 
   function startLoadingAnimation() {
-    const TOTAL_MS = 25000;
+    const TOTAL_MS = 28000; // +3s para que 0→90% tarde 18s (antes 15s)
     const INTERVAL_MS = 300;
-    const totalTicks = TOTAL_MS / INTERVAL_MS; // ~83 ticks
-    const fastTicks = Math.round(totalTicks * 0.6); // 60% of time → 0 to 90
+    const totalTicks = TOTAL_MS / INTERVAL_MS;
+    const fastTicks = Math.round(18000 / INTERVAL_MS); // 18 segundos → 0 to 90
     const slowTicks = totalTicks - fastTicks;       // 40% of time → 90 to 99
     let tick = 0;
 
