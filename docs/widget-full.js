@@ -148,7 +148,7 @@
 
     fab = document.createElement('button');
     // Círculo #222 con estrellas #FAF9F3 (8 puntas) - diseño del usuario
-    fab.innerHTML = `<svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="28" r="28" fill="#222"/><path d="M50 0 L61 39 L100 50 L61 61 L50 100 L39 61 L0 50 L39 39 Z" fill="#FAF9F3" transform="translate(36, 21) scale(0.245) translate(-50, -50)"/><path d="M50 0 L61 39 L100 50 L61 61 L50 100 L39 61 L0 50 L39 39 Z" fill="#FAF9F3" transform="translate(24, 40) scale(0.137) translate(-50, -50)"/><path d="M50 0 L61 39 L100 50 L61 61 L50 100 L39 61 L0 50 L39 39 Z" fill="#FAF9F3" transform="translate(12, 31) scale(0.086) translate(-50, -50)"/></svg>`;
+    fab.innerHTML = `<svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="28" r="28" fill="#222"/><path d="M50 0 L61 39 L100 50 L61 61 L50 100 L39 61 L0 50 L39 39 Z" fill="#FAF9F3" transform="translate(36, 21) scale(0.221) translate(-50, -50)"/><path d="M50 0 L61 39 L100 50 L61 61 L50 100 L39 61 L0 50 L39 39 Z" fill="#FAF9F3" transform="translate(24, 40) scale(0.123) translate(-50, -50)"/><path d="M50 0 L61 39 L100 50 L61 61 L50 100 L39 61 L0 50 L39 39 Z" fill="#FAF9F3" transform="translate(12, 31) scale(0.077) translate(-50, -50)"/></svg>`;
     fab.style.cssText = 'position: fixed; bottom: 24px; right: 24px; background: transparent; border: none; border-radius: 50%; width: 56px; height: 56px; cursor: pointer; box-shadow: 0 0 10px rgba(0,0,0,0.5); transition: transform 0.2s, box-shadow 0.2s; pointer-events: auto; display: flex; align-items: center; justify-content: center; padding: 0;';
     fab.onmouseover = () => { fab.style.transform = 'scale(1.08)'; fab.style.boxShadow = '0 0 14px rgba(0,0,0,0.6)'; };
     fab.onmouseout = () => { fab.style.transform = 'scale(1)'; fab.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)'; };
@@ -691,16 +691,7 @@
         </section>
 
         <section style="flex-shrink: 0;">
-          <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 10px;">
-            <div>
-              <h2 class="tryon-heading-serif" style="font-size: 16px; margin: 0 0 4px 0;">Select Pieces</h2>
-              <p style="margin: 0; font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.12em;">Maximum three selections</p>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
-              <span style="width: 6px; height: 6px; background: #6D5ED2; border-radius: 50%; flex-shrink: 0;"></span>
-              <span style="font-size: 8px; font-weight: 700; color: #2F3C4F; text-transform: uppercase; letter-spacing: 0.1em;">AI Refined</span>
-            </div>
-          </div>
+          <h2 class="tryon-heading-serif" style="font-size: 16px; margin: 0 0 10px 0;">Select Pieces</h2>
           <div class="tryon-garments-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0; flex-shrink: 0;">
             <div id="garment-0" class="tryon-garment-box" style="width: ${sizes.garmentBoxSize}px; height: ${sizes.garmentBoxSize}px; box-sizing: border-box;">
               ${TRYON_SVG.garment0}
