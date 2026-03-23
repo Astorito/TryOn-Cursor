@@ -139,11 +139,11 @@
     shadow.appendChild(wrapper);
 
     fab = document.createElement('button');
-    // Círculo negro con estrellas crema/off-white (diseño minimalista)
-    fab.innerHTML = `<svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="28" r="28" fill="#000"/><path d="M36 14 L38 22 L46 22 L39 27 L41 35 L36 30 L31 35 L33 27 L26 22 L34 22 Z" fill="#F5F0E6"/><path d="M18 26 L19.5 32 L25 32 L20 36 L21.5 42 L18 38 L14.5 42 L16 36 L11 32 L16.5 32 Z" fill="#F5F0E6"/><path d="M24 18 L25 22 L29 22 L26 25 L27 29 L24 26 L21 29 L22 25 L19 22 L23 22 Z" fill="#F5F0E6"/></svg>`;
-    fab.style.cssText = 'position: fixed; bottom: 24px; right: 24px; background: transparent; border: none; border-radius: 50%; width: 56px; height: 56px; cursor: pointer; box-shadow: 0 4px 20px rgba(0,0,0,0.35); transition: transform 0.2s, box-shadow 0.2s; pointer-events: auto; display: flex; align-items: center; justify-content: center; padding: 0;';
-    fab.onmouseover = () => { fab.style.transform = 'scale(1.08)'; fab.style.boxShadow = '0 6px 28px rgba(0,0,0,0.5)'; };
-    fab.onmouseout = () => { fab.style.transform = 'scale(1)'; fab.style.boxShadow = '0 4px 20px rgba(0,0,0,0.35)'; };
+    // Círculo #222 con estrellas #FAF9F3 (8 puntas) - diseño del usuario
+    fab.innerHTML = `<svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="28" r="28" fill="#222"/><path d="M50 0 L61 39 L100 50 L61 61 L50 100 L39 61 L0 50 L39 39 Z" fill="#FAF9F3" transform="translate(36, 21) scale(0.34) translate(-50, -50)"/><path d="M50 0 L61 39 L100 50 L61 61 L50 100 L39 61 L0 50 L39 39 Z" fill="#FAF9F3" transform="translate(24, 40) scale(0.19) translate(-50, -50)"/><path d="M50 0 L61 39 L100 50 L61 61 L50 100 L39 61 L0 50 L39 39 Z" fill="#FAF9F3" transform="translate(12, 31) scale(0.12) translate(-50, -50)"/></svg>`;
+    fab.style.cssText = 'position: fixed; bottom: 24px; right: 24px; background: transparent; border: none; border-radius: 50%; width: 56px; height: 56px; cursor: pointer; box-shadow: 0 0 10px rgba(0,0,0,0.5); transition: transform 0.2s, box-shadow 0.2s; pointer-events: auto; display: flex; align-items: center; justify-content: center; padding: 0;';
+    fab.onmouseover = () => { fab.style.transform = 'scale(1.08)'; fab.style.boxShadow = '0 0 14px rgba(0,0,0,0.6)'; };
+    fab.onmouseout = () => { fab.style.transform = 'scale(1)'; fab.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)'; };
     wrapper.appendChild(fab);
 
     overlay = document.createElement('div');
