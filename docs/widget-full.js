@@ -19,11 +19,15 @@
     resultUrl: null,
     error: null,
     currentLoadingPhase: 0,
-    loadingProgress: 0
+    loadingProgress: 0,
+    widgetMode: 'fab',  // 'fab' or 'button'
+    preloadedGarment: null  // for button mode
   };
 
   // DOM elements
   let container, fab, panel, overlay, loadingOverlay;
+  let triggerButtons = [];  // for button mode
+  let mutationObserver = null;
 
   const TRYON_SVG = {
     uploadCam: '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="1"/><circle cx="12" cy="13" r="3"/><path d="M8 6V4h8v2"/></svg>',
@@ -129,9 +133,23 @@
 
     console.log('🎨 TryOn Widget initializing with key:', API_KEY.substring(0, 10) + '...');
 
-    createElements();
-    attachStyles();
-    attachEvents();
+    // Fetch widget configuration (mode: fab or button)
+    fetch(BACKEND_URL + '/api/widget/config?key=' + encodeURIComponent(API_KEY))
+      .then(r => r.json())
+      .then(data => {
+        state.widgetMode = data.mode || 'fab';
+        console.log('[TryOn] Widget mode:', state.widgetMode);
+        createElements();
+        attachStyles();
+        attachEvents();
+      })
+      .catch(err => {
+        console.error('[TryOn] Error fetching config, falling back to fab mode:', err);
+        state.widgetMode = 'fab';
+        createElements();
+        attachStyles();
+        attachEvents();
+      });
   }
 
   function createElements() {
@@ -146,20 +164,29 @@
     wrapper.style.cssText = 'all: initial; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;';
     shadow.appendChild(wrapper);
 
-    fab = document.createElement('button');
-    // Círculo #222 con estrellas #FAF9F3 (8 puntas) - diseño del usuario
-    fab.innerHTML = `<svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="28" r="28" fill="#222"/><path d="M50 0 L61 39 L100 50 L61 61 L50 100 L39 61 L0 50 L39 39 Z" fill="#FAF9F3" transform="translate(36, 21) scale(0.221) translate(-50, -50)"/><path d="M50 0 L61 39 L100 50 L61 61 L50 100 L39 61 L0 50 L39 39 Z" fill="#FAF9F3" transform="translate(24, 40) scale(0.123) translate(-50, -50)"/><path d="M50 0 L61 39 L100 50 L61 61 L50 100 L39 61 L0 50 L39 39 Z" fill="#FAF9F3" transform="translate(12, 31) scale(0.077) translate(-50, -50)"/></svg>`;
-    fab.style.cssText = 'position: fixed; bottom: 24px; right: 24px; background: transparent; border: none; border-radius: 50%; width: 56px; height: 56px; cursor: pointer; box-shadow: 0 0 10px rgba(0,0,0,0.5); transition: transform 0.2s, box-shadow 0.2s; pointer-events: auto; display: flex; align-items: center; justify-content: center; padding: 0;';
-    fab.onmouseover = () => { fab.style.transform = 'scale(1.08)'; fab.style.boxShadow = '0 0 14px rgba(0,0,0,0.6)'; };
-    fab.onmouseout = () => { fab.style.transform = 'scale(1)'; fab.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)'; };
-    wrapper.appendChild(fab);
+    // Only create FAB in 'fab' mode
+    if (state.widgetMode === 'fab') {
+      fab = document.createElement('button');
+      fab.innerHTML = `<svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="28" r="28" fill="#222"/><path d="M50 0 L61 39 L100 50 L61 61 L50 100 L39 61 L0 50 L39 39 Z" fill="#FAF9F3" transform="translate(36, 21) scale(0.221) translate(-50, -50)"/><path d="M50 0 L61 39 L100 50 L61 61 L50 100 L39 61 L0 50 L39 39 Z" fill="#FAF9F3" transform="translate(24, 40) scale(0.123) translate(-50, -50)"/><path d="M50 0 L61 39 L100 50 L61 61 L50 100 L39 61 L0 50 L39 39 Z" fill="#FAF9F3" transform="translate(12, 31) scale(0.077) translate(-50, -50)"/></svg>`;
+      fab.style.cssText = 'position: fixed; bottom: 24px; right: 24px; background: transparent; border: none; border-radius: 50%; width: 56px; height: 56px; cursor: pointer; box-shadow: 0 0 10px rgba(0,0,0,0.5); transition: transform 0.2s, box-shadow 0.2s; pointer-events: auto; display: flex; align-items: center; justify-content: center; padding: 0;';
+      fab.onmouseover = () => { fab.style.transform = 'scale(1.08)'; fab.style.boxShadow = '0 0 14px rgba(0,0,0,0.6)'; };
+      fab.onmouseout = () => { fab.style.transform = 'scale(1)'; fab.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)'; };
+      wrapper.appendChild(fab);
+    }
 
     overlay = document.createElement('div');
     overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: transparent; display: none; pointer-events: none;';
     wrapper.appendChild(overlay);
 
+    // Panel positioning depends on mode
+    var panelStyle = 'position: fixed; width: ' + layoutConfig.panelWidth + 'px; height: ' + layoutConfig.panelTotalHeight + 'px; background: white; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 30px rgba(0,0,0,0.05); display: none; overflow: hidden; flex-direction: column; transition: height 0.4s ease; pointer-events: auto; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;';
+    if (state.widgetMode === 'fab') {
+      panelStyle += 'bottom: 82px; right: 24px;';
+    } else {
+      panelStyle += 'bottom: 24px; right: 24px;';
+    }
     panel = document.createElement('div');
-    panel.style.cssText = 'position: fixed; bottom: 82px; right: 24px; width: ' + layoutConfig.panelWidth + 'px; height: ' + layoutConfig.panelTotalHeight + 'px; background: white; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 30px rgba(0,0,0,0.05); display: none; overflow: hidden; flex-direction: column; transition: height 0.4s ease; pointer-events: auto; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;';
+    panel.style.cssText = panelStyle;
     wrapper.appendChild(panel);
 
     loadingOverlay = document.createElement('div');
@@ -633,7 +660,60 @@
   }
 
   function attachEvents() {
-    fab.onclick = togglePanel;
+    if (state.widgetMode === 'fab' && fab) {
+      fab.onclick = togglePanel;
+    } else if (state.widgetMode === 'button') {
+      // Hook into [data-tryon-trigger] buttons
+      hookTriggerButtons();
+      // Watch for dynamically added buttons
+      watchForNewTriggers();
+    }
+  }
+
+  function hookTriggerButtons() {
+    const triggers = document.querySelectorAll('[data-tryon-trigger]');
+    triggers.forEach(btn => {
+      if (!btn._tryonHooked) {
+        btn._tryonHooked = true;
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const garmentUrl = btn.dataset.tryonGarment;
+          if (garmentUrl) {
+            preloadGarment(garmentUrl);
+          }
+          openPanel();
+        });
+        triggerButtons.push(btn);
+      }
+    });
+  }
+
+  function watchForNewTriggers() {
+    if (mutationObserver) return;
+    mutationObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === 1) {  // Element node
+              if (node.matches && node.matches('[data-tryon-trigger]')) {
+                hookTriggerButtons();
+              }
+              // Also check descendants
+              const descendants = node.querySelectorAll ? node.querySelectorAll('[data-tryon-trigger]') : [];
+              if (descendants.length > 0) {
+                hookTriggerButtons();
+              }
+            }
+          });
+        }
+      });
+    });
+    mutationObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
+  function preloadGarment(garmentUrl) {
+    state.preloadedGarment = garmentUrl;
+    console.log('[TryOn] Preloading garment from button:', garmentUrl);
   }
 
   function togglePanel() {
@@ -649,7 +729,47 @@
     overlay.style.display = 'block';
     panel.style.display = 'flex';
     panel.style.animation = 'slideIn 0.3s ease';
-    setTimeout(() => setupFileInputs(), 0);
+    setTimeout(() => {
+      setupFileInputs();
+      // If there's a preloaded garment from button mode, load it
+      if (state.preloadedGarment) {
+        loadPreloadedGarment();
+      }
+    }, 0);
+  }
+
+  function loadPreloadedGarment() {
+    const garmentUrl = state.preloadedGarment;
+    if (!garmentUrl) return;
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      const base64 = canvas.toDataURL('image/jpeg', 0.95);
+
+      compressImage(base64, 1024, 0.95).then((compressed) => {
+        state.garments[0] = compressed;
+        state.garmentFiles[0] = null;
+        updateGarmentBox(0, true, compressed);
+        updateSubmitButton();
+        // Clear preloaded so it doesn't reload if the panel is reopened
+        state.preloadedGarment = null;
+      }).catch(() => {
+        state.garments[0] = base64;
+        updateGarmentBox(0, true, base64);
+        updateSubmitButton();
+        state.preloadedGarment = null;
+      });
+    };
+    img.onerror = function() {
+      console.error('[TryOn] Failed to load preloaded garment:', garmentUrl);
+      state.preloadedGarment = null;
+    };
+    img.src = garmentUrl;
   }
 
   function closePanel() {

@@ -27,7 +27,10 @@ model Client {
   creditsUsed       Int      @default(0) // Créditos consumidos
   lastPurchaseDate  DateTime?
   monthlyRevenue    Float    @default(0) // Ingresos mensuales por suscripción
-  
+
+  // Configuración del widget
+  widgetMode       String   @default("fab") // "fab" o "button"
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -17,11 +17,13 @@ export default function CompanyForm({ onSuccess }: CompanyFormProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [website, setWebsite] = useState("");
+  const [widgetMode, setWidgetMode] = useState<"fab" | "button">("fab");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
     apiKey: string;
     name: string;
     id: string;
+    widgetMode: "fab" | "button";
   } | null>(null);
   const [error, setError] = useState("");
   const [showCode, setShowCode] = useState(false);
@@ -38,6 +40,7 @@ export default function CompanyForm({ onSuccess }: CompanyFormProps) {
       name: name.trim(),
       email: email.trim() || null,
       website: website.trim() || null,
+      widgetMode,
     };
 
     try {
@@ -65,11 +68,13 @@ export default function CompanyForm({ onSuccess }: CompanyFormProps) {
         apiKey: data.client.apiKey,
         name: data.client.name,
         id: data.client.id,
+        widgetMode: data.client.widgetMode || "fab",
       });
       setShowCode(true);
       setName("");
       setEmail("");
       setWebsite("");
+      setWidgetMode("fab");
       onSuccess();
     } catch {
       setError("Error de conexión");
@@ -78,12 +83,32 @@ export default function CompanyForm({ onSuccess }: CompanyFormProps) {
     }
   };
 
-  const embedCode = result
-    ? `<script
-  src="${typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"}/api/widget"
+  const getEmbedCode = () => {
+    if (!result) return "";
+    const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+    const scriptCode = `<script
+  src="${origin}/api/widget"
   data-tryon-key="${result.apiKey}"
-></script>`
-    : "";
+></script>`;
+
+    if (result.widgetMode === "fab") {
+      return scriptCode;
+    } else {
+      // Button mode includes both script and button example
+      return `${scriptCode}
+
+<!-- Ejemplo de botón TRYLOOK (personalizar según tu diseño) -->
+<button
+  data-tryon-trigger
+  data-tryon-garment="https://tu-sitio.com/imagen-prenda.jpg"
+  style="background: #2F3C4F; color: white; padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer;"
+>
+  TRYLOOK
+</button>`;
+    }
+  };
+
+  const embedCode = getEmbedCode();
 
   const copyEmbedCode = async () => {
     try {
@@ -139,6 +164,45 @@ export default function CompanyForm({ onSuccess }: CompanyFormProps) {
               className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
             />
           </div>
+        </div>
+
+        <div className="border-t border-border pt-4">
+          <label className="block text-sm font-medium text-text mb-3">
+            Modo del Widget
+          </label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="widgetMode"
+                value="fab"
+                checked={widgetMode === "fab"}
+                onChange={(e) => setWidgetMode(e.target.value as "fab" | "button")}
+                className="w-4 h-4"
+              />
+              <span className="text-sm text-text">
+                💫 Botón flotante (FAB)
+              </span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="widgetMode"
+                value="button"
+                checked={widgetMode === "button"}
+                onChange={(e) => setWidgetMode(e.target.value as "fab" | "button")}
+                className="w-4 h-4"
+              />
+              <span className="text-sm text-text">
+                🎯 Botón inline en página
+              </span>
+            </label>
+          </div>
+          <p className="text-xs text-text-muted mt-2">
+            {widgetMode === "fab"
+              ? "Muestra un botón flotante ✨ en la esquina inferior derecha"
+              : "El cliente coloca un botón [data-tryon-trigger] en su página y lo personaliza"}
+          </p>
         </div>
 
         <button
@@ -243,15 +307,25 @@ export default function CompanyForm({ onSuccess }: CompanyFormProps) {
             <h3 className="text-sm font-medium text-blue-900 mb-2">
               📚 Próximos pasos:
             </h3>
-            <ol className="text-xs text-blue-800 space-y-1 list-decimal list-inside">
-              <li>Copiá el código de integración de arriba</li>
-              <li>Pegalo en tu HTML antes del cierre de &lt;/body&gt;</li>
-              <li>
-                El botón flotante &quot;✨ Try Look&quot; aparecerá
-                automáticamente
-              </li>
-              <li>Los clientes podrán probarse prendas directamente en tu sitio</li>
-            </ol>
+            {result?.widgetMode === "fab" ? (
+              <ol className="text-xs text-blue-800 space-y-1 list-decimal list-inside">
+                <li>Copiá el código de integración de arriba</li>
+                <li>Pegalo en tu HTML antes del cierre de &lt;/body&gt;</li>
+                <li>
+                  El botón flotante &quot;✨ Try Look&quot; aparecerá
+                  automáticamente
+                </li>
+                <li>Los clientes podrán probarse prendas directamente en tu sitio</li>
+              </ol>
+            ) : (
+              <ol className="text-xs text-blue-800 space-y-1 list-decimal list-inside">
+                <li>Copiá el código de integración (ambas partes)</li>
+                <li>El &lt;script&gt; va antes del cierre de &lt;/body&gt;</li>
+                <li>El &lt;button&gt; va donde quieras mostrar el botón TRYLOOK (ej: ficha de producto)</li>
+                <li>Personaliza <code>data-tryon-garment</code> con la URL real de la prenda</li>
+                <li>Estiliza el botón con CSS según tu diseño</li>
+              </ol>
+            )}
           </div>
 
           <button

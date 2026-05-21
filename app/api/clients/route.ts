@@ -28,6 +28,7 @@ export async function GET() {
       apiKey: c.apiKey,
       active: c.active,
       limit: c.limit,
+      widgetMode: c.widgetMode,
       usageCount: c._count.generations,
       domains: c.allowedDomains.map((d) => d.domain),
       createdAt: c.createdAt.toISOString(),
@@ -58,11 +59,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, email, website, limit: clientLimit, domains } = body;
+    const { name, email, website, limit: clientLimit, domains, widgetMode } = body;
 
     if (!name || typeof name !== "string" || name.trim().length === 0) {
       return NextResponse.json(
         { success: false, error: "El nombre es requerido" },
+        { status: 400 }
+      );
+    }
+
+    if (widgetMode && !["fab", "button"].includes(widgetMode)) {
+      return NextResponse.json(
+        { success: false, error: "widgetMode debe ser 'fab' o 'button'" },
         { status: 400 }
       );
     }
@@ -74,6 +82,7 @@ export async function POST(request: NextRequest) {
       website: website?.trim() || null,
       apiKey,
       limit: clientLimit || 5000,
+      widgetMode: widgetMode || "fab",
       allowedDomains: domains?.length
         ? {
             create: domains.map((d: string) => ({ domain: d.trim() })),
@@ -94,6 +103,7 @@ export async function POST(request: NextRequest) {
           email: client.email,
           apiKey: client.apiKey,
           limit: client.limit,
+          widgetMode: client.widgetMode,
           createdAt: client.createdAt.toISOString(),
         },
       },
@@ -138,18 +148,34 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { active } = body;
+    const { active, widgetMode } = body;
 
-    if (typeof active !== "boolean") {
+    const updateData: any = {};
+
+    if (typeof active === "boolean") {
+      updateData.active = active;
+    }
+
+    if (widgetMode !== undefined) {
+      if (!["fab", "button"].includes(widgetMode)) {
+        return NextResponse.json(
+          { success: false, error: "widgetMode debe ser 'fab' o 'button'" },
+          { status: 400 }
+        );
+      }
+      updateData.widgetMode = widgetMode;
+    }
+
+    if (Object.keys(updateData).length === 0) {
       return NextResponse.json(
-        { success: false, error: "Campo 'active' debe ser boolean" },
+        { success: false, error: "Debe proporcionar al menos un campo para actualizar" },
         { status: 400 }
       );
     }
 
     const updated = await prisma.client.update({
       where: { id },
-      data: { active },
+      data: updateData,
     });
 
     return NextResponse.json({
@@ -157,6 +183,7 @@ export async function PATCH(request: NextRequest) {
       client: {
         id: updated.id,
         active: updated.active,
+        widgetMode: updated.widgetMode,
       },
     });
   } catch (error) {
