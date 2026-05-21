@@ -169,6 +169,49 @@ export default function DemoPage() {
           </div>
         </div>
 
+        {/* Button Mode Demo */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mt-8">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            🎯 Modo Botón Inline
+          </h3>
+          <p className="text-sm text-gray-600 mb-6">
+            Si configuraste el widget en modo "botón inline", el script se inyecta en la página y espera por elementos `[data-tryon-trigger]`. Hacé clic en el botón de abajo para probar:
+          </p>
+          <div className="flex gap-4 mb-6">
+            <div className="flex-1">
+              <div className="bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg p-6 flex flex-col items-center justify-center min-h-40">
+                <div className="text-6xl mb-4">👕</div>
+                <h4 className="font-medium text-gray-900 mb-2">Camisa Premium</h4>
+                <p className="text-gray-600 mb-4">$89.99</p>
+                <button
+                  data-tryon-trigger
+                  data-tryon-garment="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400"
+                  className="px-6 py-2 bg-gray-900 text-white font-semibold rounded-lg hover:bg-black transition-colors"
+                >
+                  TRYLOOK
+                </button>
+              </div>
+            </div>
+            <div className="flex-1">
+              <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg p-6 flex flex-col items-center justify-center min-h-40">
+                <div className="text-6xl mb-4">👖</div>
+                <h4 className="font-medium text-gray-900 mb-2">Jeans Clásico</h4>
+                <p className="text-gray-600 mb-4">$79.99</p>
+                <button
+                  data-tryon-trigger
+                  data-tryon-garment="https://images.unsplash.com/photo-1542272604-787c62d465d1?w=400"
+                  className="px-6 py-2 bg-gray-900 text-white font-semibold rounded-lg hover:bg-black transition-colors"
+                >
+                  TRYLOOK
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="text-sm text-gray-500 bg-blue-50 border border-blue-200 p-4 rounded-lg">
+            <strong>Nota:</strong> En modo botón, cada botón con `[data-tryon-trigger]` abre el panel. El atributo `data-tryon-garment` especifica la URL de la prenda que se precarga automáticamente.
+          </div>
+        </div>
+
         {/* Integration Code */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mt-8">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">

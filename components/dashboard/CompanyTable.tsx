@@ -17,6 +17,7 @@ interface ClientData {
   active: boolean;
   limit: number;
   usageCount: number;
+  widgetMode?: "fab" | "button";
   createdAt: string;
 }
 
@@ -145,6 +146,7 @@ export default function CompanyTable({ clients, onUpdate }: CompanyTableProps) {
             <tr className="bg-gray-50 text-left text-text-muted">
               <th className="px-4 py-3 font-medium">Empresa</th>
               <th className="px-4 py-3 font-medium">Email</th>
+              <th className="px-4 py-3 font-medium text-center">Widget</th>
               <th className="px-4 py-3 font-medium text-center">Estado</th>
               <th className="px-4 py-3 font-medium text-center">Generaciones</th>
               <th className="px-4 py-3 font-medium text-center">Limite</th>
@@ -155,7 +157,7 @@ export default function CompanyTable({ clients, onUpdate }: CompanyTableProps) {
           <tbody className="divide-y divide-border">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-text-muted">
+                <td colSpan={8} className="px-4 py-8 text-center text-text-muted">
                   {clients.length === 0
                     ? "No hay empresas. Creá una arriba."
                     : "No se encontraron resultados."}
@@ -180,6 +182,13 @@ export default function CompanyTable({ clients, onUpdate }: CompanyTableProps) {
                     </td>
                     <td className="px-4 py-3 text-text-muted">
                       {c.email || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-center text-xs">
+                      {c.widgetMode === "button" ? (
+                        <span title="Botón inline">🎯 Botón</span>
+                      ) : (
+                        <span title="Botón flotante">💫 FAB</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <button
